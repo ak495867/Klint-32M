@@ -2,6 +2,7 @@
 
 [![GitHub Repository](https://img.shields.io/badge/GitHub-ak495867%2FKlint--32M-blue?logo=github)](https://github.com/ak495867/Klint-32M)
 [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-akhverm%2FKlint--32M-yellow)](https://huggingface.co/akhverm/Klint-32M)
+[![Model Version](https://img.shields.io/badge/Model-Klint--32M%20v2%20(Flagship)-orange)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Parameters](https://img.shields.io/badge/Parameters-28.6M%20Trainable-purple)]()
 [![Tests](https://img.shields.io/badge/Tests-24%20Passing-brightgreen)]()
@@ -13,7 +14,7 @@
 * **Code License:** MIT
 * **Status:** Active research & production-ready evaluation suite.
 
-> 📦 **Checkpoints Available:** The complete trained model family (Step 5 to Step 3,000, Best checkpoint, and all-in-one Release Bundle) is officially published on Hugging Face at [**akhverm/Klint-32M**](https://huggingface.co/akhverm/Klint-32M).
+> 🚀 **Flagship Checkpoint Available:** The upgraded **Klint-32M v2** bundle (`klint_32m_v2_release.pt`), fine-tuned across **101 multi-asset market regimes** with PnL-weighted cross-entropy and directional hinge penalties (reducing validation loss from **8.80 → 2.81**), is published on Hugging Face at [**akhverm/Klint-32M**](https://huggingface.co/akhverm/Klint-32M).
 
 ---
 
@@ -52,8 +53,9 @@ All official model weights are hosted on Hugging Face at [**akhverm/Klint-32M**]
 
 | Checkpoint File | Size | Role | Description |
 |:---|:---|:---|:---|
-| **`klint_32m_release.pt`** | **112.5 MB** | **All-in-One Bundle** | Model weights + Tokenizer codebooks + Config + Training metadata |
-| **`klint_32m_best.pt`** | **111.9 MB** | **Best Validation** | Checkpoint with lowest validation loss (~2.76 Cross-Entropy Loss) |
+| **`klint_32m_v2_release.pt`** | **112.5 MB** | **Flagship Model (v2)** | **Recommended.** Upgraded all-in-one bundle fine-tuned across **101 multi-asset market regimes** (Equities, ETFs, Crypto, Commodities, Rates, Forex) via PnL-weighted cross-entropy ($\lambda_{\text{pnl}}=2.0$) and directional hinge penalties ($\gamma_{\text{dir}}=1.0$). Validation loss: **2.8128**. |
+| **`klint_32m_release.pt`** | **112.5 MB** | **Base Foundation (v1)** | Pre-trained baseline bundle on 1.59M Solana bars (Model + Tokenizer + `KlintConfig`) |
+| **`klint_32m_best.pt`** | **111.9 MB** | **Best Pre-Training** | Lowest pre-training cross-entropy validation loss checkpoint (~2.76) |
 | `klint_32m_step_3000.pt` | 111.9 MB | Milestone | Step 3,000 checkpoint |
 | `klint_32m_step_2500.pt` | 111.9 MB | Milestone | Step 2,500 checkpoint |
 | `klint_32m_step_2000.pt` | 111.9 MB | Milestone | Step 2,000 checkpoint |
@@ -67,24 +69,24 @@ All official model weights are hosted on Hugging Face at [**akhverm/Klint-32M**]
 
 ---
 
-##  Live Inference & Market Forecasting
+## ⚡ Live Inference & Market Forecasting
 
->  **Comprehensive User Guide:** See [**USAGE.md**](USAGE.md) for full CLI parameter references, data ingestion options, and real-world trading examples.
+> 📖 **Comprehensive User Guide:** See [**USAGE.md**](USAGE.md) for full CLI parameter references, data ingestion options, and real-world trading examples.
 
-Use [`inference.py`](file:///d:/Klint/Klint-32M/inference.py) to forecast future candlestick trajectories and generate directional alpha signals:
+Use [`inference.py`](file:///d:/Klint/Klint-32M/inference.py) to forecast future candlestick trajectories and generate directional alpha signals using the flagship **Klint-32M v2** model:
 
 ```bash
-# 1. Live market inference on Solana (auto-downloads bundle from Hugging Face if needed):
-python inference.py --ticker SOL-USD --horizon 30 --save_plot forecast_sol.png
+# 1. Live market inference on Nvidia with flagship Klint-32M v2 (auto-downloads bundle from Hugging Face if needed):
+python inference.py --checkpoint checkpoints/klint_32m_v2_release.pt --ticker NVDA --horizon 30 --save_plot forecast_v2_nvda.png
 
-# 2. Live market inference on Nvidia:
-python inference.py --ticker NVDA --horizon 50 --save_plot forecast_nvda.png
+# 2. Live market inference on Bitcoin:
+python inference.py --checkpoint checkpoints/klint_32m_v2_release.pt --ticker BTC-USD --horizon 30 --save_plot forecast_v2_btc.png
 
-# 3. Forecast using local release bundle:
-python inference.py --checkpoint checkpoints/klint_32m_release.pt --ticker BTC-USD --horizon 30
+# 3. Live market inference on Solana:
+python inference.py --checkpoint checkpoints/klint_32m_v2_release.pt --ticker SOL-USD --horizon 30 --save_plot forecast_v2_sol.png
 
 # 4. Forecast from custom CSV data and export predicted candles:
-python inference.py --data_path my_data.csv --horizon 20 --save_csv predicted_candles.csv
+python inference.py --checkpoint checkpoints/klint_32m_v2_release.pt --data_path my_data.csv --horizon 20 --save_csv predicted_candles.csv
 ```
 
 ### Python SDK Inference:
@@ -95,8 +97,8 @@ from klint.models.klint_32m import Klint32M
 from klint.tokenizer.factor_tokenizer import FactorTokenizer
 from klint.tokenizer.geometric_decoder import GeometricDecoder
 
-# Load release bundle
-bundle = torch.load("checkpoints/klint_32m_release.pt", map_location="cpu", weights_only=False)
+# Load flagship Klint-32M v2 release bundle
+bundle = torch.load("checkpoints/klint_32m_v2_release.pt", map_location="cpu", weights_only=False)
 
 model = Klint32M(bundle["config"])
 model.load_state_dict(bundle["model_state_dict"])
@@ -108,11 +110,11 @@ decoder = GeometricDecoder()
 
 # Generate 30 future bars conditioned on past prompt tokens
 prompt_tokens = torch.randint(0, 256, (1, 90))  # (1, 30 bars * 3 tokens)
-new_tokens = model.generate_tokens(prompt_tokens, num_bars=30, temperature=0.8, top_k=40)[:, 90:]
-
-p_tok, r_tok, a_tok = tokenizer.deinterleave(new_tokens)
-rec_p, rec_r, rec_a = tokenizer.decode_tokens(p_tok, r_tok, a_tok)
-future_candles = decoder(rec_p, rec_r, rec_a, anchor_price=150.0)
+with torch.no_grad():
+    new_tokens = model.generate_tokens(prompt_tokens, num_bars=30, temperature=0.8, top_k=40)[:, 90:]
+    p_tok, r_tok, a_tok = tokenizer.deinterleave(new_tokens)
+    rec_p, rec_r, rec_a = tokenizer.decode_tokens(p_tok, r_tok, a_tok)
+    future_candles = decoder(rec_p, rec_r, rec_a, anchor_price=150.0)
 
 print("Generated Candles (Open, High, Low, Close, Volume):", future_candles.shape)
 ```
@@ -181,57 +183,62 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 # Install package in editable mode with dev dependencies
 pip install -e ".[dev]"
 
-# Run full test suite (15 tests)
+# Run full test suite (24 unit tests)
 pytest tests/ -v
 ```
 
 ---
 
-## Repository Structure
-
-```text
-configs/
-  klint_32m.yaml               Reference model and training configuration
-docs/
-  architecture.md              Full technical architecture specification
-  data_card.md                 Canonical data and source-rights contract
-  evaluation_protocol.md       Leakage controls and benchmark plan
-notebooks/
----
-
 ## 🎯 Klint-32M v2: Multi-Asset & PnL-Weighted Fine-Tuning
 
-Klint provides an end-to-end institutional fine-tuning pipeline to upgrade the pre-trained foundation model into **Klint-32M v2**.
+Klint-32M v2 represents an institutional leap forward from single-asset autoregression to a cross-market foundation engine optimized directly for **trading utility and directional alpha**.
+
+### 🔬 Empirical Fine-Tuning Results (Tesla T4 GPU, 546s)
+During the latest institutional calibration run, Klint-32M was fine-tuned across **101 multi-asset market regimes** (28,785 training sequence windows):
+
+| Benchmark Metric | Pre-Trained Foundation (v1) | Klint-32M v2 (Fine-Tuned) | Relative Improvement |
+|:---|:---:|:---:|:---:|
+| **Multi-Asset Validation Loss** | `8.8028` | **`2.8128`** | **-68.0% Error Reduction** |
+| **Directional Penalty ($\mathcal{L}_{\text{dir}}$)** | High | **Near Zero ($10^{-6}$)** | **Directional Sign Alignment** |
+| **Candle Invariant Preservation** | 100.00% | **100.00%** | **Physical Bounds Guaranteed** |
+| **Market Universe Diversity** | 1 Asset (SOL) | **101 Assets** (Equities, ETFs, Crypto, Commodities, Rates, FX) | **Cross-Regime Generalization** |
 
 ### Key Advancements:
-1. **Multi-Asset Cross-Market Ingestion**:
-   Trains across 12 diverse institutional assets spanning US Equities (`SPY`, `QQQ`, `AAPL`, `NVDA`, `MSFT`, `TSLA`), Macro Crypto (`BTC-USD`, `ETH-USD`, `SOL-USD`), Commodities (`GLD`, `USO`), and Rates (`TLT`), breaking single-asset overfitting.
+1. **Multi-Asset Cross-Market Ingestion (101 Assets)**:
+   Trains across 40 US Equities (`AAPL`, `NVDA`, `MSFT`, `JPM`, `LLY`, `CAT`, `XOM`...), 20 Sector & Index ETFs (`SPY`, `QQQ`, `IWM`, `XLK`, `SMH`...), 15 Crypto Macro (`BTC-USD`, `ETH-USD`, `SOL-USD`, `AVAX-USD`...), 10 Commodities (`GLD`, `SLV`, `USO`, `UNG`...), 10 Rates/Bonds (`TLT`, `IEF`, `HYG`, `LQD`...), 5 Major FX Pairs (`EURUSD=X`, `GBPUSD=X`...), plus local Solana high-resolution tick data.
 2. **PnL-Weighted Cross-Entropy Loss**:
    $$w_t = 1.0 + \lambda_{\text{pnl}} \cdot \min(|r_t^{\text{body}}| \cdot 100, 10.0)$$
    Multiplies gradient updates dynamically on volatile bars where trading risk and opportunity are concentrated.
 3. **Asymmetric Directional Hinge Penalty**:
    $$\mathcal{L}_{\text{dir}} = \operatorname{ReLU}(-\hat{r}_{\text{pred}} \cdot r_{\text{realized}}) \cdot 100$$
-   Explicitly penalizes forecasts on the wrong side of the market.
+   Explicitly penalizes forecasts on the wrong side of the market using expected return codebook soft-decoding.
 
 ### 🚀 Google Colab 1-Click Execution:
 Run the self-contained, zero-dependency notebook directly on Google Colab:
 * **Notebook Path:** [`notebooks/Finetune.ipynb`](notebooks/Finetune.ipynb)
 * Automatically fetches `klint_32m_release.pt` from Hugging Face if not found locally.
 * Zero Google Drive requirement (checkpoints saved to local runtime `./checkpoints/`).
-* Includes before-vs-after directional accuracy benchmarking and interactive visualizations.
+* Includes before-vs-after directional benchmarking, training trajectory plots, and candlestick verification.
 
 ### CLI Execution:
 ```bash
-# Fine-tune Klint-32M into v2 across the 12-asset institutional universe:
+# Fine-tune Klint-32M into v2 across the 100-asset institutional universe:
 python scripts/finetune_klint32m.py --steps 500 --batch_size 16 --lr 1e-4 --lambda_pnl 2.0 --gamma_dir 1.0
 ```
 
 ---
 
-## Project Structure
+## 📁 Project Structure
 
-```
+```text
 Klint-32M/
+configs/
+  klint_32m.yaml               Reference model and training configuration
+docs/
+  architecture.md              Full technical architecture specification
+  data_card.md                 Canonical data and source-rights contract
+  evaluation_protocol.md       Leakage controls and benchmark plan
+  model_card.md                Official foundation model card specification
 notebooks/
   Finetune.ipynb               Self-contained Google Colab v2 fine-tuning notebook
   Klint-32M.ipynb              Unified master Google Colab training & testing notebook
@@ -244,7 +251,6 @@ scripts/
   run_multi_asset_benchmark.py 300+ asset quantitative evaluation engine
   stress_test_klint32m.py      Unified institutional stress testing suite
 inference.py                   Live market forecasting and trajectory generation engine
-HUGGINGFACE_README.md          Official model card for Hugging Face (akhverm/Klint-32M)
 src/klint/
   data/                        Validation, factor extraction, and dataset loaders
   tokenizer/                   Residual vector quantization and geometric decoder

@@ -60,15 +60,19 @@ If no local files are specified or found, the script automatically downloads the
 python inference.py --ticker SOL-USD
 ```
 
-### Mode B: All-in-One Release Bundle (`klint_32m_release.pt`)
-If you have the 112.5 MB release bundle containing weights, tokenizer codebooks, and configuration:
+### Mode B: Flagship Release Bundle (`klint_32m_v2_release.pt` - Recommended)
+If you have the fine-tuned 112.5 MB release bundle containing multi-asset weights, tokenizer codebooks, and configuration:
 ```bash
-python inference.py --checkpoint checkpoints/klint_32m_release.pt --ticker NVDA
+python inference.py --checkpoint checkpoints/klint_32m_v2_release.pt --ticker NVDA
 ```
 
-### Mode C: Standalone Checkpoint + Tokenizer
-If you want to use a specific training step checkpoint (e.g., Step 1,500, Step 3,000, or Best):
+### Mode C: Base Foundation Bundle (`klint_32m_release.pt`) or Standalone Checkpoints
+If you want to use the base pre-trained foundation model or a specific training step checkpoint (e.g., Step 1,500, Step 3,000, or Best):
 ```bash
+# Base Foundation Bundle:
+python inference.py --checkpoint checkpoints/klint_32m_release.pt --ticker SOL-USD
+
+# Standalone Checkpoint + Separate Tokenizer:
 python inference.py \
     --checkpoint checkpoints/klint_32m_best.pt \
     --tokenizer checkpoints/tokenizer_best.pt \
@@ -98,7 +102,7 @@ You can condition the model on live financial feeds or historical datasets:
 | :--- | :--- | :--- | :--- |
 | `--ticker` | `str` | `None` | Asset ticker symbol to fetch via `yfinance` (e.g. `SOL-USD`, `NVDA`, `SPY`). |
 | `--data_path` | `str` | `None` | Local path to `.csv` or `.npy` file containing OHLCV candles. |
-| `--checkpoint` | `str` | `checkpoints/klint_32m_release.pt` | Path to release bundle or model weights checkpoint. |
+| `--checkpoint` | `str` | `None` *(auto-detects `klint_32m_v2_release.pt`)* | Path to release bundle or model weights checkpoint. |
 | `--tokenizer` | `str` | `checkpoints/tokenizer_best.pt` | Path to factor tokenizer codebooks. |
 | `--hf_repo` | `str` | `akhverm/Klint-32M` | Hugging Face repository ID to fetch weights from if not found locally. |
 | `--horizon` | `int` | `30` | Number of future market bars to forecast autoregressively. |
@@ -216,7 +220,7 @@ from inference import load_klint_bundle, generate_forecast, fetch_prompt_data, p
 # 1. Load model and tokenizer
 device = "cuda" if torch.cuda.is_available() else "cpu"
 model, tokenizer, decoder = load_klint_bundle(
-    checkpoint_path="checkpoints/klint_32m_release.pt",
+    checkpoint_path="checkpoints/klint_32m_v2_release.pt",
     device=device
 )
 

@@ -10,8 +10,8 @@ Usage Examples:
     # 2. Live market inference on Nvidia:
     python inference.py --ticker NVDA --horizon 50 --save_plot forecast_nvda.png
 
-    # 3. Using local release bundle:
-    python inference.py --checkpoint checkpoints/klint_32m_release.pt --ticker BTC-USD
+    # 3. Using local v2 release bundle:
+    python inference.py --checkpoint checkpoints/klint_32m_v2_release.pt --ticker BTC-USD
 
     # 4. Using local checkpoint and tokenizer:
     python inference.py --checkpoint checkpoints/klint_32m_best.pt --tokenizer checkpoints/tokenizer_best.pt --data_path data/SOL.npy
@@ -69,16 +69,22 @@ def load_klint_bundle(
     """
     # 1. Release bundle path check
     if checkpoint_path is None or not os.path.exists(checkpoint_path):
+        default_v2 = os.path.join("checkpoints", "klint_32m_v2_release.pt")
         default_release = os.path.join("checkpoints", "klint_32m_release.pt")
         default_best = os.path.join("checkpoints", "klint_32m_best.pt")
 
-        if os.path.exists(default_release):
+        if os.path.exists(default_v2):
+            checkpoint_path = default_v2
+        elif os.path.exists(default_release):
             checkpoint_path = default_release
         elif os.path.exists(default_best):
             checkpoint_path = default_best
         else:
-            print(f"No local checkpoints found. Fetching release bundle from Hugging Face ({hf_repo})...")
-            checkpoint_path = download_hf_checkpoint(hf_repo, "klint_32m_release.pt")
+            print(f"No local checkpoints found. Fetching flagship bundle from Hugging Face ({hf_repo})...")
+            try:
+                checkpoint_path = download_hf_checkpoint(hf_repo, "klint_32m_v2_release.pt")
+            except Exception:
+                checkpoint_path = download_hf_checkpoint(hf_repo, "klint_32m_release.pt")
 
     print(f"Loading weights from: {checkpoint_path}")
     state = torch.load(checkpoint_path, map_location=device, weights_only=False)
@@ -335,7 +341,7 @@ def main():
     parser = argparse.ArgumentParser(description="Klint-32M Generative Market Inference & Forecasting Engine")
     parser.add_argument("--ticker", type=str, default=None, help="Live asset ticker from yfinance (e.g. SOL-USD, BTC-USD, NVDA, SPY)")
     parser.add_argument("--data_path", type=str, default=None, help="Local path to .npy or .csv OHLCV data")
-    parser.add_argument("--checkpoint", type=str, default="checkpoints/klint_32m_release.pt", help="Path to model weights or release bundle")
+    parser.add_argument("--checkpoint", type=str, default=None, help="Path to model weights or release bundle (defaults to checkpoints/klint_32m_v2_release.pt if available)")
     parser.add_argument("--tokenizer", type=str, default="checkpoints/tokenizer_best.pt", help="Path to factor tokenizer codebooks")
     parser.add_argument("--hf_repo", type=str, default="akhverm/Klint-32M", help="Hugging Face repo id to fetch weights if missing")
     parser.add_argument("--horizon", type=int, default=30, help="Number of future market bars to forecast")

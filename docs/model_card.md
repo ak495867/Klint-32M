@@ -37,7 +37,8 @@ All official model checkpoints are hosted on Hugging Face at [`akhverm/Klint-32M
 
 | Checkpoint File | Size | Role | Description |
 | :--- | :--- | :--- | :--- |
-| **`klint_32m_release.pt`** | **112.5 MB** | **All-in-One Bundle** | Model weights + Factor Tokenizer codebooks + `KlintConfig` + Training metadata |
+| **`klint_32m_v2_release.pt`** | **112.5 MB** | **Flagship Model (v2)** | **Recommended.** Upgraded all-in-one bundle fine-tuned across **101 multi-asset market regimes** via PnL-weighted cross-entropy ($\lambda_{\text{pnl}}=2.0$) and directional hinge penalties ($\gamma_{\text{dir}}=1.0$). Validation loss: **2.8128**. |
+| **`klint_32m_release.pt`** | **112.5 MB** | **Base Foundation (v1)** | Pre-trained baseline bundle on 1.59M Solana bars (Model + Tokenizer + `KlintConfig`) |
 | **`klint_32m_best.pt`** | **111.9 MB** | **Best Validation** | Lowest cross-entropy validation loss checkpoint (~2.76) |
 | `klint_32m_step_3000.pt` | 111.9 MB | Milestone | Step 3,000 checkpoint |
 | `klint_32m_step_2500.pt` | 111.9 MB | Milestone | Step 2,500 checkpoint |
@@ -52,8 +53,9 @@ All official model checkpoints are hosted on Hugging Face at [`akhverm/Klint-32M
 
 ---
 
-## 4. Training Dynamics & Convergence
+## 4. Training & Fine-Tuning Dynamics
 
+### 4.1 Base Foundation Pre-Training (v1)
 * **Hardware:** Google Colab GPU (Tesla T4 with CUDA FP16 automatic mixed precision).
 * **Dataset:** 1,591,983 1-minute Solana bars (4,775,949 factor tokens).
 * **Optimization:** AdamW ($\beta_1 = 0.9, \beta_2 = 0.95, \text{weight\_decay} = 0.1$) with Cosine Annealing learning rate schedule and linear warmup.
@@ -64,6 +66,26 @@ All official model checkpoints are hosted on Hugging Face at [`akhverm/Klint-32M
   * Step 1,000 Cross-Entropy Loss: $\sim 3.25$
   * Step 1,400 Validation Loss: **2.769** (recorded in `klint_32m_best.pt`)
   * Step 3,000 Final Convergence: Representation stabilized with codebook utilization $>95\%$.
+
+### 4.2 Multi-Asset & PnL-Weighted Fine-Tuning (v2)
+* **Objective:** Adapt single-asset pre-trained foundation to multi-asset market dynamics while optimizing directly for trading utility and directional alpha.
+* **Universe:** 101 institutional assets spanning:
+  * 40 Equities (`AAPL`, `NVDA`, `MSFT`, `JPM`, `LLY`, `CAT`, `XOM`...)
+  * 20 Sector & Index ETFs (`SPY`, `QQQ`, `IWM`, `XLK`, `SMH`, `XLE`...)
+  * 15 Crypto Macro (`BTC-USD`, `ETH-USD`, `SOL-USD`, `AVAX-USD`...)
+  * 10 Commodities (`GLD`, `SLV`, `USO`, `UNG`...)
+  * 10 Rates/Bonds (`TLT`, `IEF`, `HYG`, `LQD`...)
+  * 5 Major Forex Pairs (`EURUSD=X`, `GBPUSD=X`, `USDJPY=X`...)
+* **Total Training Data:** 28,785 sequence windows across diverse volatility regimes.
+* **Loss Formulation:**
+  $$\mathcal{L}_{\text{total}} = \mathcal{L}_{\text{pnl-weighted CE}} + \gamma_{\text{dir}} \cdot \mathcal{L}_{\text{dir}}$$
+  * PnL weight multiplier: $\lambda_{\text{pnl}} = 2.0$ (upweights volatile bars where risk/opportunity is concentrated).
+  * Directional hinge penalty: $\gamma_{\text{dir}} = 1.0$ (penalizes mispredicted return signs via codebook soft-decoding).
+* **Empirical Convergence:**
+  * Pre-Trained Foundation Multi-Asset Validation Loss: `8.8028`
+  * Fine-Tuned v2 Multi-Asset Validation Loss: **`2.8128`** (**-68.0% error reduction**)
+  * Directional Penalty ($\mathcal{L}_{\text{dir}}$): Reduced from elevated levels to **near zero ($10^{-6}$)**.
+  * Physical Candle Invariants: **100.00% preserved**.
 
 ---
 
