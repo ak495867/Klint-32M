@@ -1,4 +1,4 @@
-# Klint
+# Klint - 32M
 
 > **Klint** is an open research architecture for generative financial time-series modeling. It represents market bars as separate **price-path**, **range-shape**, and **activity** code streams, then models them with a causal Transformer and decodes them into structurally valid OHLCV trajectories.
 
@@ -7,12 +7,14 @@
 * **Code license:** MIT
 * **Status:** Active research and implementation.
 
+> The checkpoint for the Klint-32M model will be released later at HuggingFace under the user `akhverm` [akhverm](https://huggingface.co/akhverm)
+
 ---
 
 ## Why Klint?
 
 Financial candles combine directional movement, intrabar range, and market activity, but those signals are not interchangeable. Klint makes that decomposition explicit. It tokenizes three causal factor streams independently, predicts the next bar’s streams in the order:
-$$\text{Price} \longrightarrow \text{Range conditioned on Price} \longrightarrow \text{Activity conditioned on Price \& Range}$$
+$$\text{Price} \longrightarrow \text{Range conditioned on Price} \longrightarrow \text{Activity conditioned on Price \ Range}$$
 and reconstructs the candle with rules that preserve its price geometry.
 
 Klint is inspired by the general discrete-token/autoregressive paradigm used in financial time-series foundation models such as Kronos. It is an independent design: it does not reuse Kronos source code, checkpoints, data, tokenizer, or brand. Its discrete latent formulation draws on learned vector quantization, while the causal backbone uses rotary position embeddings (RoPE) and RMSNorm.
@@ -56,7 +58,7 @@ pytest tests/
 
 ---
 
-## 🚀 Full Scale Model Training on Google Colab
+##  Full Scale Model Training on Google Colab
 
 The repository includes a ready-to-run notebook for training the full **32-Million parameter** model: [`notebooks/train_klint32m_colab.ipynb`](file:///d:/Klint/Klint-32M/notebooks/train_klint32m_colab.ipynb).
 
@@ -97,7 +99,7 @@ tests/                         Comprehensive pytest test suite
 ```
 
 ## References
-1. Shi et al., *Kronos: A Foundation Model for the Language of Financial Markets* (2025)
-2. van den Oord, Vinyals & Kavukcuoglu, *Neural Discrete Representation Learning* (2017)
-3. Su et al., *RoFormer: Enhanced Transformer with Rotary Position Embedding* (2021)
-4. Zhang & Sennrich, *Root Mean Square Layer Normalization* (2019)
+* 1. Shi et al., *Kronos: A Foundation Model for the Language of Financial Markets* (2025)
+* 2. van den Oord, Vinyals & Kavukcuoglu, *Neural Discrete Representation Learning* (2017)
+* 3. Su et al., *RoFormer: Enhanced Transformer with Rotary Position Embedding* (2021)
+* 4. Zhang & Sennrich, *Root Mean Square Layer Normalization* (2019)
