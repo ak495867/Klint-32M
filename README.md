@@ -4,7 +4,7 @@
 [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-akhverm%2FKlint--32M-yellow)](https://huggingface.co/akhverm/Klint-32M)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Parameters](https://img.shields.io/badge/Parameters-28.6M%20Trainable-purple)]()
-[![Tests](https://img.shields.io/badge/Tests-15%20Passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-24%20Passing-brightgreen)]()
 
 > **Klint** is an open research foundation architecture for generative financial time-series modeling. It represents market bars as separate **price-path**, **range-shape**, and **activity** code streams, models them with a causal Transformer, and decodes them into structurally valid OHLCV trajectories with guaranteed physical geometry.
 
@@ -197,11 +197,50 @@ docs/
   data_card.md                 Canonical data and source-rights contract
   evaluation_protocol.md       Leakage controls and benchmark plan
 notebooks/
+---
+
+## 🎯 Klint-32M v2: Multi-Asset & PnL-Weighted Fine-Tuning
+
+Klint provides an end-to-end institutional fine-tuning pipeline to upgrade the pre-trained foundation model into **Klint-32M v2**.
+
+### Key Advancements:
+1. **Multi-Asset Cross-Market Ingestion**:
+   Trains across 12 diverse institutional assets spanning US Equities (`SPY`, `QQQ`, `AAPL`, `NVDA`, `MSFT`, `TSLA`), Macro Crypto (`BTC-USD`, `ETH-USD`, `SOL-USD`), Commodities (`GLD`, `USO`), and Rates (`TLT`), breaking single-asset overfitting.
+2. **PnL-Weighted Cross-Entropy Loss**:
+   $$w_t = 1.0 + \lambda_{\text{pnl}} \cdot \min(|r_t^{\text{body}}| \cdot 100, 10.0)$$
+   Multiplies gradient updates dynamically on volatile bars where trading risk and opportunity are concentrated.
+3. **Asymmetric Directional Hinge Penalty**:
+   $$\mathcal{L}_{\text{dir}} = \operatorname{ReLU}(-\hat{r}_{\text{pred}} \cdot r_{\text{realized}}) \cdot 100$$
+   Explicitly penalizes forecasts on the wrong side of the market.
+
+### 🚀 Google Colab 1-Click Execution:
+Run the self-contained, zero-dependency notebook directly on Google Colab:
+* **Notebook Path:** [`notebooks/Finetune.ipynb`](notebooks/Finetune.ipynb)
+* Automatically fetches `klint_32m_release.pt` from Hugging Face if not found locally.
+* Zero Google Drive requirement (checkpoints saved to local runtime `./checkpoints/`).
+* Includes before-vs-after directional accuracy benchmarking and interactive visualizations.
+
+### CLI Execution:
+```bash
+# Fine-tune Klint-32M into v2 across the 12-asset institutional universe:
+python scripts/finetune_klint32m.py --steps 500 --batch_size 16 --lr 1e-4 --lambda_pnl 2.0 --gamma_dir 1.0
+```
+
+---
+
+## Project Structure
+
+```
+Klint-32M/
+notebooks/
+  Finetune.ipynb               Self-contained Google Colab v2 fine-tuning notebook
   Klint-32M.ipynb              Unified master Google Colab training & testing notebook
 scripts/
   train_tokenizer.py           Pre-train RVQ factor codebooks
   cache_tokens.py              Pre-encode 1.59M bars into integer token IDs
   train_klint32m.py            High-speed foundation model trainer (with --resume_from)
+  finetune_klint32m.py         Institutional PnL-weighted v2 fine-tuning CLI
+  run_comprehensive_eval.py    Comprehensive 11-experiment foundation evaluation suite
   run_multi_asset_benchmark.py 300+ asset quantitative evaluation engine
   stress_test_klint32m.py      Unified institutional stress testing suite
 inference.py                   Live market forecasting and trajectory generation engine
@@ -211,9 +250,11 @@ src/klint/
   tokenizer/                   Residual vector quantization and geometric decoder
   models/                      RoPE, RMSNorm, causal Transformer, and Klint-32M
   training/                    Trainer, loss functions, and evaluation metrics
+  finetune/                    PnL loss, multi-asset dataset, and warm-start trainer
+  eval/                        Kronos-style 11-experiment evaluation protocol
   benchmark/                   Universe registry, yfinance fetcher, and plotter
   stress_test/                 Monte Carlo, cost sensitivity, walk-forward, OOD engines
-tests/                         Comprehensive pytest test suite (15 unit tests)
+tests/                         Comprehensive pytest test suite (24 unit tests passing)
 ```
 
 ---
