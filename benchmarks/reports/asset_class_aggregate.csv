@@ -1,0 +1,7 @@
+Asset_Class,Asset_Count,Mean_Directional_Accuracy_Pct,Median_Directional_Accuracy_Pct,Mean_Annualized_Sharpe,Median_Annualized_Sharpe,Mean_Max_Drawdown_Pct,Mean_Cumulative_Return_Pct,Mean_Win_Rate_Pct,Mean_Profit_Factor,Candle_Invariant_Pass_Rate
+Commodities,28,53.57,54.67,0.236,0.512,-13.17,3.06,51.68,1.066,100.0%
+Crypto,43,43.4,47.33,-0.185,-0.02,-67.36,-91352489681.29,42.63,0.995,100.0%
+Equities,128,49.22,48.67,-0.59,-0.784,-26.14,-2.69,48.09,0.94,100.0%
+ETFs,50,49.12,49.33,-0.659,-0.616,-17.08,-3.73,46.97,0.921,100.0%
+Fixed_Income,20,40.97,41.33,-5.409,-5.67,-9.1,-8.66,26.47,0.309,100.0%
+FX,27,43.95,45.33,-32.932,-27.831,-8.03,-7.71,11.61,0.169,100.0%

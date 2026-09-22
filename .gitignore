@@ -17,7 +17,6 @@ klint_32m_step_1000.pt
 klint_32m_step_1500.pt 
 # the checkpoint for the 1500th step of training {will be released later at huggingface under the user `akhverm` [akhverm](https://huggingface.co/akhverm) }
 klint_32m_step_1505.pt 
-klint_32m_step_2000.pt 
 
 
 # data/sol_tokens.pt releasing the tokenized(.pt) data file
@@ -39,4 +38,4 @@ ENV/
 .pytest_cache/
 .coverage
 htmlcov/
-
+**/yfinance_cache/
