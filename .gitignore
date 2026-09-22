@@ -38,3 +38,5 @@ ENV/
 .pytest_cache/
 .coverage
 htmlcov/
+**/yfinance_cache/
+benchmarks/
