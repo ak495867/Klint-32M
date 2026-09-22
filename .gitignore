@@ -14,6 +14,10 @@ klint_32m_step_500.pt
 klint_32m_step_1000.pt 
 # the checkpoint for the 1000th step of training {will be released later at huggingface under the user `akhverm` [akhverm](https://huggingface.co/akhverm) }
 
+klint_32m_step_1500.pt 
+# the checkpoint for the 1500th step of training {will be released later at huggingface under the user `akhverm` [akhverm](https://huggingface.co/akhverm) }
+
+
 # data/sol_tokens.pt releasing the tokenized(.pt) data file
 # data/SOL.npy releasing the numpy data file
 
