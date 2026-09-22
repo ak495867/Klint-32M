@@ -4,8 +4,9 @@ __pycache__/
 *$py.class
 
 # PyTorch / checkpoints / data
-checkpoints/
-*.pt
+# checkpoints/ releasing the model tokenizers 
+klint_32m_step_5.pt
+klint_32m_best.pt
 *.pth
 data/sol_tokens.pt
 !data/SOL.npy
