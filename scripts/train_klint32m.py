@@ -266,7 +266,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--tokens_path", type=str, default="data/sol_tokens.pt")
     parser.add_argument("--save_dir", type=str, default="checkpoints")
-    parser.add_argument("--resume_from", type=str, default=None, help="Path to checkpoint to resume training from")
+    parser.add_argument("--resume_from", type=str, default="checkpoints\\klint_32m_best.pt", help="Path to checkpoint to resume training from")
     parser.add_argument("--max_steps", type=int, default=5000)
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--grad_accum_steps", type=int, default=4)
