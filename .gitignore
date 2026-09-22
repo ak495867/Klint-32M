@@ -8,6 +8,8 @@ __pycache__/
 klint_32m_step_5.pt
 klint_32m_best.pt
 *.pth
+checkpoints\klint_32m_step_500.pt 
+# the checkpoint for the 500th step of training {will be released later at huggingface}
 # data/sol_tokens.pt releasing the tokenized(.pt) data file
 # data/SOL.npy releasing the numpy data file
 
