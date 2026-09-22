@@ -79,7 +79,8 @@ class CostSensitivityEngine:
 
         mean_r = np.mean(strategy_returns)
         std_r = np.std(strategy_returns) + 1e-8
-        downside_std = np.std(strategy_returns[strategy_returns < 0]) + 1e-8
+        neg_returns = strategy_returns[strategy_returns < 0]
+        downside_std = float(np.std(neg_returns)) + 1e-8 if len(neg_returns) > 1 else float(std_r)
 
         sharpe = float((mean_r / std_r) * np.sqrt(252))
         sortino = float((mean_r / downside_std) * np.sqrt(252))

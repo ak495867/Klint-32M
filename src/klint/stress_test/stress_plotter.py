@@ -60,8 +60,8 @@ class StressPlotter:
             f"99% 1-Bar VaR: {mc_res.var_99_pct:.2f}%\n"
             f"99% Expected Shortfall: {mc_res.cvar_99_pct:.2f}%"
         )
-        ax1.text(0.02, 0.04, info_text, transform=ax1.transAxes, fontsize=10,
-                 bbox=dict(boxstyle="round,pad=0.5", facecolor="#2c3e50", alpha=0.85, edgecolor="#ecf0f1", textcolor="white"))
+        ax1.text(0.02, 0.04, info_text, transform=ax1.transAxes, fontsize=10, color="white",
+                 bbox=dict(boxstyle="round,pad=0.5", facecolor="#2c3e50", alpha=0.85, edgecolor="#ecf0f1"))
 
         # 2. Max Drawdown Distribution
         ax2.hist(mc_res.mdd_distribution, bins=35, color="#e74c3c", alpha=0.75, edgecolor="#c0392b")

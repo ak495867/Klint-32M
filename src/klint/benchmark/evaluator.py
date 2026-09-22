@@ -161,7 +161,8 @@ class MultiAssetEvaluator:
         # Sharpe & Sortino Ratios (Annualized)
         mean_r = np.mean(strategy_returns)
         std_r = np.std(strategy_returns)
-        downside_std = np.std(strategy_returns[strategy_returns < 0])
+        neg_returns = strategy_returns[strategy_returns < 0]
+        downside_std = float(np.std(neg_returns)) if len(neg_returns) > 1 else float(std_r)
 
         ann_sharpe = float((mean_r / (std_r + 1e-8)) * np.sqrt(252))
         ann_sortino = float((mean_r / (downside_std + 1e-8)) * np.sqrt(252))
