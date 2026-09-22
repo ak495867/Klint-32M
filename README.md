@@ -56,6 +56,28 @@ pytest tests/
 
 ---
 
+## 🚀 Full Scale Model Training on Google Colab
+
+The repository includes a ready-to-run notebook for training the full **32-Million parameter** model: [`notebooks/train_klint32m_colab.ipynb`](file:///d:/Klint/Klint-32M/notebooks/train_klint32m_colab.ipynb).
+
+All checkpoints are saved locally inside the Colab environment (`./checkpoints/`) with **zero Google Drive dependency**.
+
+```bash
+# Stage 1: Train the Factor Tokenizer (RVQ)
+python scripts/train_tokenizer.py --data_path data/SOL.npy --epochs 15 --batch_size 128
+
+# Stage 2: Cache discrete tokens (50x speedup)
+python scripts/cache_tokens.py --data_path data/SOL.npy --tokenizer_path checkpoints/tokenizer_best.pt
+
+# Stage 3: Train the full 32M parameter causal Transformer
+python scripts/train_klint32m.py --tokens_path data/sol_tokens.pt --save_dir checkpoints --max_steps 25000 --batch_size 8 --grad_accum_steps 4
+
+# Stage 4: Generate synthetic market trajectories
+python examples/generate_synthetic_bars.py
+```
+
+---
+
 ## Repository Structure
 
 ```text
