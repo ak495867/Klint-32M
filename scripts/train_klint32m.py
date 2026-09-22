@@ -62,19 +62,22 @@ def get_lr(it: int, warmup_steps: int, max_steps: int, max_lr: float, min_lr: fl
 def train_klint_32m(
     tokens_path: str = "data/sol_tokens.pt",
     save_dir: str = "checkpoints",
+    resume_from: Optional[str] = None,
     max_steps: int = 10000,
-    batch_size: int = 2,
-    grad_accum_steps: int = 16,
+    batch_size: int = 8,
+    grad_accum_steps: int = 4,
     learning_rate: float = 3e-4,
     warmup_steps: int = 500,
     eval_interval: int = 250,
     save_interval: int = 500,
-    context_bars: int = 1024,
-    gradient_checkpointing: bool = True,
+    context_bars: int = 256,
+    gradient_checkpointing: bool = False,
+    compile_model: bool = False,
+    use_in_vram_sampling: bool = True,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ):
     print("=" * 60)
-    print(f" Klint: Stage 3 - Training Klint-32M Foundation Model on {device.upper()}")
+    print(f" Klint: Stage 3 - High-Speed Training Klint-32M on {device.upper()}")
     print("=" * 60)
 
     os.makedirs(save_dir, exist_ok=True)
@@ -85,7 +88,7 @@ def train_klint_32m(
     if not os.path.exists(tokens_path):
         raise FileNotFoundError(f"Cached tokens {tokens_path} not found. Run scripts/cache_tokens.py first!")
 
-    cached = torch.load(tokens_path, map_location="cpu")
+    cached = torch.load(tokens_path, map_location="cpu", weights_only=False)
     token_matrix = cached["token_matrix"]  # (N, 3)
     total_bars = len(token_matrix)
     print(f"Loaded {total_bars:,} bars ({total_bars * 3:,} tokens) from {tokens_path}")
@@ -95,33 +98,66 @@ def train_klint_32m(
     train_end = int(total_bars * 0.85)
     val_start = train_end + embargo
 
-    train_tokens = token_matrix[:train_end]
-    val_tokens = token_matrix[val_start:]
+    train_tokens = token_matrix[:train_end].view(-1).long()
+    val_tokens = token_matrix[val_start:].view(-1).long()
 
-    train_dataset = CachedTokenDataset(train_tokens, context_bars=context_bars, stride=8)
-    val_dataset = CachedTokenDataset(val_tokens, context_bars=context_bars, stride=32)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
-
-    print(f"Train windows: {len(train_dataset):,} | Val windows: {len(val_dataset):,}")
-    print(f"Sequence length: {context_bars} bars = {context_bars * 3} tokens")
+    seq_len = context_bars * 3
+    print(f"Sequence length: {context_bars} bars = {seq_len} tokens")
     print(f"Effective batch size: {batch_size * grad_accum_steps} (Micro-batch={batch_size}, Accum={grad_accum_steps})")
-    print(f"Gradient Checkpointing: {gradient_checkpointing} (VRAM conservation enabled)")
+    print(f"Gradient Checkpointing: {gradient_checkpointing}")
+
+    # Move tokens directly to GPU for zero CPU-overhead tensor slicing
+    if use_in_vram_sampling and device == "cuda":
+        print("Using In-VRAM Direct Tensor Slicing (Zero CPU-GPU memory bus overhead)")
+        train_gpu = train_tokens.to(device)
+        val_gpu = val_tokens.to(device)
+        max_train_start = len(train_gpu) - seq_len
+        max_val_start = len(val_gpu) - seq_len
+        indices_template = torch.arange(seq_len, device=device).unsqueeze(0)
+    else:
+        train_dataset = CachedTokenDataset(token_matrix[:train_end], context_bars=context_bars, stride=8)
+        val_dataset = CachedTokenDataset(token_matrix[val_start:], context_bars=context_bars, stride=32)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, drop_last=True)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, drop_last=True)
+        train_iter = iter(train_loader)
 
     # 2. Model setup
-    config = KlintConfig(max_seq_len=context_bars * 3, gradient_checkpointing=gradient_checkpointing)
+    config = KlintConfig(max_seq_len=max(seq_len, 4096), gradient_checkpointing=gradient_checkpointing)
     model = Klint32M(config).to(device)
     print(f"Trainable Parameters: {model.count_parameters():,}")
+
+    step = 0
+    best_val_loss = float("inf")
+
+    # Resumption support
+    if resume_from:
+        if os.path.exists(resume_from):
+            print(f"--> Resuming weights from: {resume_from}")
+            ckpt = torch.load(resume_from, map_location=device, weights_only=False)
+            model.load_state_dict(ckpt["model_state_dict"])
+            if "step" in ckpt:
+                step = ckpt["step"]
+                print(f"--> Resumed starting step: {step:,}")
+            if "val_loss" in ckpt and ckpt["val_loss"] is not None:
+                best_val_loss = ckpt["val_loss"]
+                print(f"--> Previous best validation loss: {best_val_loss:.4f}")
+        else:
+            print(f"Warning: Checkpoint {resume_from} not found. Starting from scratch.")
+
+    if compile_model and hasattr(torch, "compile"):
+        print("Enabling torch.compile() for fused kernels...")
+        try:
+            model = torch.compile(model)
+        except Exception as e:
+            print(f"torch.compile warning: {e}")
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate, weight_decay=0.01, betas=(0.9, 0.95))
     scaler = torch.amp.GradScaler("cuda", enabled=(device == "cuda"))
 
     model.train()
-    step = 0
-    best_val_loss = float("inf")
     start_time = time.time()
-    train_iter = iter(train_loader)
+    last_log_time = time.time()
+    last_log_step = step
 
     while step < max_steps:
         optimizer.zero_grad()
@@ -132,13 +168,19 @@ def train_klint_32m(
             param_group["lr"] = lr
 
         for _ in range(grad_accum_steps):
-            try:
-                seq = next(train_iter)
-            except StopIteration:
-                train_iter = iter(train_loader)
-                seq = next(train_iter)
+            if use_in_vram_sampling and device == "cuda":
+                # Pure GPU tensor slicing
+                start_bars = torch.randint(0, max_train_start // 3, (batch_size,), device=device) * 3
+                batch_indices = start_bars.unsqueeze(1) + indices_template
+                seq = train_gpu[batch_indices]
+            else:
+                try:
+                    seq = next(train_iter)
+                except StopIteration:
+                    train_iter = iter(train_loader)
+                    seq = next(train_iter)
+                seq = seq.to(device)
 
-            seq = seq.to(device)
             inputs = seq[:, :-1]
             targets = seq[:, 1:]
 
@@ -164,18 +206,26 @@ def train_klint_32m(
         if step % eval_interval == 0:
             model.eval()
             val_loss = 0.0
-            val_batches = 0
+            val_batches = 20
             with torch.no_grad():
-                for v_seq in val_loader:
-                    v_seq = v_seq.to(device)
+                for _ in range(val_batches):
+                    if use_in_vram_sampling and device == "cuda":
+                        v_start = torch.randint(0, max_val_start // 3, (batch_size,), device=device) * 3
+                        v_indices = v_start.unsqueeze(1) + indices_template
+                        v_seq = val_gpu[v_indices]
+                    else:
+                        try:
+                            v_seq = next(val_iter)
+                        except (StopIteration, NameError):
+                            val_iter = iter(val_loader)
+                            v_seq = next(val_iter)
+                        v_seq = v_seq.to(device)
+
                     v_in = v_seq[:, :-1]
                     v_tgt = v_seq[:, 1:]
                     with torch.amp.autocast("cuda", enabled=(device == "cuda"), dtype=torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16):
                         v_out = model(v_in, targets=v_tgt)
                     val_loss += v_out["loss"].item()
-                    val_batches += 1
-                    if val_batches >= 20:  # Eval on 20 batches for speed
-                        break
 
             avg_val_loss = val_loss / max(val_batches, 1)
             print(f"\n[EVAL] Step {step} | Validation Cross-Entropy Loss: {avg_val_loss:.4f}\n")
@@ -216,20 +266,23 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--tokens_path", type=str, default="data/sol_tokens.pt")
     parser.add_argument("--save_dir", type=str, default="checkpoints")
-    parser.add_argument("--max_steps", type=int, default=10000)
-    parser.add_argument("--batch_size", type=int, default=2)
-    parser.add_argument("--grad_accum_steps", type=int, default=16)
+    parser.add_argument("--resume_from", type=str, default=None, help="Path to checkpoint to resume training from")
+    parser.add_argument("--max_steps", type=int, default=5000)
+    parser.add_argument("--batch_size", type=int, default=8)
+    parser.add_argument("--grad_accum_steps", type=int, default=4)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
-    parser.add_argument("--warmup_steps", type=int, default=500)
-    parser.add_argument("--eval_interval", type=int, default=250)
-    parser.add_argument("--save_interval", type=int, default=1000)
-    parser.add_argument("--context_bars", type=int, default=1024)
+    parser.add_argument("--warmup_steps", type=int, default=200)
+    parser.add_argument("--eval_interval", type=int, default=200)
+    parser.add_argument("--save_interval", type=int, default=500)
+    parser.add_argument("--context_bars", type=int, default=256)
     parser.add_argument("--no_gradient_checkpointing", action="store_true")
+    parser.add_argument("--compile", action="store_true", help="Enable torch.compile()")
     args = parser.parse_args()
 
     train_klint_32m(
         tokens_path=args.tokens_path,
         save_dir=args.save_dir,
+        resume_from=args.resume_from,
         max_steps=args.max_steps,
         batch_size=args.batch_size,
         grad_accum_steps=args.grad_accum_steps,
@@ -239,4 +292,5 @@ if __name__ == "__main__":
         save_interval=args.save_interval,
         context_bars=args.context_bars,
         gradient_checkpointing=not args.no_gradient_checkpointing,
+        compile_model=args.compile,
     )
