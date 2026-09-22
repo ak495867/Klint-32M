@@ -4,12 +4,16 @@ __pycache__/
 *$py.class
 
 # PyTorch / checkpoints / data
-# checkpoints/ releasing the model tokenizers 
+# checkpoints/ 'releasing the model tokenizers'
 klint_32m_step_5.pt
 klint_32m_best.pt
 *.pth
-checkpoints\klint_32m_step_500.pt 
-# the checkpoint for the 500th step of training {will be released later at huggingface}
+klint_32m_step_500.pt 
+# the checkpoint for the 500th step of training {will be released later at huggingface under the user `akhverm` [akhverm](https://huggingface.co/akhverm) }
+
+klint_32m_step_1000.pt 
+# the checkpoint for the 1000th step of training {will be released later at huggingface under the user `akhverm` [akhverm](https://huggingface.co/akhverm) }
+
 # data/sol_tokens.pt releasing the tokenized(.pt) data file
 # data/SOL.npy releasing the numpy data file
 
