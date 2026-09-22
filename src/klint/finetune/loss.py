@@ -101,7 +101,7 @@ class PnLWeightedCrossEntropyLoss(nn.Module):
         # 1. Price Factor Loss (Financial utility & PnL weighting)
         if mask_to_p.any():
             lp = logits_price[:, mask_to_p].reshape(-1, self.price_vocab_size)
-            tp = targets[:, mask_to_p].reshape(-1)
+            tp = torch.clamp(targets[:, mask_to_p].reshape(-1), 0, self.price_vocab_size - 1)
 
             # Continuous realized return corresponding to target token
             r_realized = code_returns[tp]  # (N_p,)
@@ -134,13 +134,13 @@ class PnLWeightedCrossEntropyLoss(nn.Module):
         # 2. Range Factor Loss
         if mask_to_r.any():
             lr = logits_range[:, mask_to_r].reshape(-1, self.range_vocab_size)
-            tr = targets[:, mask_to_r].reshape(-1)
+            tr = torch.clamp(targets[:, mask_to_r].reshape(-1), 0, self.range_vocab_size - 1)
             loss_range = F.cross_entropy(lr, tr)
 
         # 3. Activity Factor Loss
         if mask_to_a.any():
             la = logits_activity[:, mask_to_a].reshape(-1, self.activity_vocab_size)
-            ta = targets[:, mask_to_a].reshape(-1)
+            ta = torch.clamp(targets[:, mask_to_a].reshape(-1), 0, self.activity_vocab_size - 1)
             loss_act = F.cross_entropy(la, ta)
 
         total_loss = (loss_price + loss_range + loss_act) / 3.0

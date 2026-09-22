@@ -45,10 +45,10 @@ def get_or_create_release_bundle(
 
         m_state = torch.load(model_checkpoint, map_location="cpu", weights_only=False)
         cfg = m_state.get("config", KlintConfig())
-        model_weights = m_state.get("model_state", m_state.get("model", m_state))
+        model_weights = m_state.get("model_state_dict", m_state.get("model_state", m_state.get("model", m_state)))
 
         t_state = torch.load(tokenizer_checkpoint, map_location="cpu", weights_only=False)
-        tok_weights = t_state.get("tokenizer_state", t_state.get("model_state", t_state))
+        tok_weights = t_state.get("tokenizer_state_dict", t_state.get("tokenizer_state", t_state.get("model_state", t_state)))
 
         bundle = {
             "config": cfg,

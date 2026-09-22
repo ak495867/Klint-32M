@@ -92,11 +92,14 @@ class Klint32M(nn.Module):
         x = torch.zeros(B, seq_len, self.config.d_model, device=device, dtype=torch.float32)
 
         if mask_p.any():
-            x[:, mask_p] = self.embed_price(sequence[:, mask_p])
+            tok_p = torch.clamp(sequence[:, mask_p], 0, self.config.price_vocab_size - 1)
+            x[:, mask_p] = self.embed_price(tok_p)
         if mask_r.any():
-            x[:, mask_r] = self.embed_range(sequence[:, mask_r])
+            tok_r = torch.clamp(sequence[:, mask_r], 0, self.config.range_vocab_size - 1)
+            x[:, mask_r] = self.embed_range(tok_r)
         if mask_a.any():
-            x[:, mask_a] = self.embed_activity(sequence[:, mask_a])
+            tok_a = torch.clamp(sequence[:, mask_a], 0, self.config.activity_vocab_size - 1)
+            x[:, mask_a] = self.embed_activity(tok_a)
 
         return x + type_emb
 

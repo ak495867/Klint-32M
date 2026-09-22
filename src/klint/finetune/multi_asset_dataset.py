@@ -153,19 +153,21 @@ class MultiAssetFineTuneDataset(Dataset):
                 if tokens is not None:
                     all_asset_tokens[dummy_ticker] = tokens
 
-        # 4. Partition each asset chronologically into train/val sliding windows
+        # 4. Partition each asset chronologically into train/val sliding windows (strictly bar-aligned)
         for ticker, tokens in all_asset_tokens.items():
             total_tokens = len(tokens)
-            split_idx = int(total_tokens * (1.0 - self.val_ratio))
-            embargo_tokens = self.seq_len  # Embargo equal to context window
+            total_bars = total_tokens // 3
+
+            train_bars = int(total_bars * (1.0 - self.val_ratio))
+            embargo_bars = self.context_bars
 
             if self.split == "train":
-                asset_tokens = tokens[:split_idx]
+                asset_tokens = tokens[: train_bars * 3]
             else:
-                start_val = split_idx + embargo_tokens
-                if start_val >= total_tokens - self.seq_len:
-                    start_val = split_idx  # Fallback if series is short
-                asset_tokens = tokens[start_val:]
+                start_bar = train_bars + embargo_bars
+                if start_bar >= total_bars - self.context_bars:
+                    start_bar = max(0, train_bars)  # Fallback if series is short
+                asset_tokens = tokens[start_bar * 3 :]
 
             num_tokens = len(asset_tokens)
             if num_tokens >= self.seq_len:
