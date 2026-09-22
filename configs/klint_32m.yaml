@@ -1,0 +1,35 @@
+model:
+  name: "Klint-32M"
+  d_model: 480
+  n_layers: 10
+  n_heads: 10
+  d_head: 48
+  d_ff: 1920
+  dropout: 0.1
+  rope_base: 10000.0
+  max_sequence_length: 3072 # 1024 bars * 3 factors per bar
+
+tokenizer:
+  price_vocab_size: 512
+  range_vocab_size: 256
+  activity_vocab_size: 256
+  latent_dim: 64
+  ema_decay: 0.99
+  dead_code_threshold: 2
+
+data:
+  context_bars: 1024
+  embargo_bars: 1440
+  factors:
+    - price_path
+    - range_shape
+    - activity
+
+training:
+  learning_rate: 0.0003
+  weight_decay: 0.01
+  warmup_steps: 1000
+  max_steps: 50000
+  batch_size: 16
+  grad_clip: 1.0
+  entropy_regularization: 0.01
