@@ -1,0 +1,2 @@
+id_mean_ic,ood_mean_ic,id_mean_hit_rate,ood_mean_hit_rate,id_mean_sharpe,ood_mean_sharpe,retention_ratio_hit_rate,conclusion
+0.030187181353295765,-0.041881590819181136,49.0,51.20776255707762,0.4969566266291405,-12.32597095965284,1.045056378502593,Moderate Generalization: Retains baseline predictability with slight OOD degradation.

@@ -1,0 +1,2 @@
+ticker,paths_simulated,observed_sharpe,permutation_p_value_sharpe,permutation_p_value_return,var_95_pct,var_99_pct,cvar_95_pct,cvar_99_pct,terminal_equity_p05,terminal_equity_p50_median,terminal_equity_p95,mdd_median_pct,mdd_p95_pct_stress
+SOL,2000,0.0,1.0,1.0,0.0,0.0,0.0,0.0,1.0,1.0,1.0,0.0,0.0

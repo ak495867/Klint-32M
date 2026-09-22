@@ -1,0 +1,2 @@
+discriminator_accuracy_pct,discriminative_score,mmd_score,wasserstein_distance,synthetic_precision_pct,synthetic_recall_pct
+85.0,0.35,0.3694920501251943,0.0035113994828585926,100.0,19.724137931034484

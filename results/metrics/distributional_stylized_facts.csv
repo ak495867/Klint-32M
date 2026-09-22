@@ -1,0 +1,2 @@
+real_kurtosis,synth_kurtosis,real_acf_abs_lag1,synth_acf_abs_lag1,volatility_clustering_captured,wasserstein_returns
+42.854467937246646,53.059688568115234,0.4793660708215789,-0.02477204850110856,False,0.004307426368956085

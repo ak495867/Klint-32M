@@ -1,0 +1,6 @@
+fold_idx,is_bars,oos_bars,is_sharpe,oos_sharpe,is_hit_rate,oos_hit_rate,is_cum_return_pct,oos_cum_return_pct,efficiency_ratio
+1,33,23,0.0,0.0,50.0,50.0,0.0,0.0,0.0
+2,66,23,0.0,0.0,50.0,50.0,0.0,0.0,0.0
+3,99,23,0.0,0.0,50.0,50.0,0.0,0.0,0.0
+4,132,23,0.0,0.0,50.0,50.0,0.0,0.0,0.0
+5,165,23,0.0,0.0,50.0,50.0,0.0,0.0,0.0
