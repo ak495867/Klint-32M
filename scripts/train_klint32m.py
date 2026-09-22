@@ -147,7 +147,7 @@ def train_klint_32m(
                 loss = out["loss"] / grad_accum_steps
 
             scaler.scale(loss).backward()
-            accum_loss += loss.item() * grad_accum_steps
+            accum_loss += loss.item()
 
         scaler.unscale_(optimizer)
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
