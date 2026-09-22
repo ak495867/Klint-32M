@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from typing import Union, Optional
+from typing import Union, Optional, Any
 import numpy as np
 
 
@@ -90,3 +90,33 @@ class GeometricDecoder(nn.Module):
             curr_close = close_t
 
         return torch.stack(ohlcv_bars, dim=1)  # (B, T, 5)
+
+    def decode(
+        self,
+        price_path_or_streams: Union[torch.Tensor, Any],
+        range_shape: Optional[torch.Tensor] = None,
+        activity: Optional[torch.Tensor] = None,
+        anchor_price: Union[torch.Tensor, float] = 100.0,
+    ) -> np.ndarray:
+        """Convenience method accepting either FactorStreams or individual tensors/arrays, returning numpy array."""
+        if hasattr(price_path_or_streams, "price_path"):
+            p = torch.as_tensor(price_path_or_streams.price_path, dtype=torch.float32)
+            r = torch.as_tensor(price_path_or_streams.range_shape, dtype=torch.float32)
+            a = torch.as_tensor(price_path_or_streams.activity, dtype=torch.float32)
+            anchor = getattr(price_path_or_streams, "anchor_price", anchor_price)
+        else:
+            p = torch.as_tensor(price_path_or_streams, dtype=torch.float32)
+            r = torch.as_tensor(range_shape, dtype=torch.float32)
+            a = torch.as_tensor(activity, dtype=torch.float32)
+            anchor = anchor_price
+
+        if p.ndim == 2:
+            p = p.unsqueeze(0)
+            r = r.unsqueeze(0)
+            a = a.unsqueeze(0)
+
+        with torch.no_grad():
+            ohlcv_tensor = self.forward(p, r, a, anchor_price=anchor)
+
+        return ohlcv_tensor.squeeze(0).cpu().numpy()
+

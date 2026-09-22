@@ -133,6 +133,7 @@ class FactorTokenizer(nn.Module):
             "vq_loss": loss_p + loss_r + loss_a,
         }
 
+    @torch.no_grad()
     def decode_tokens(
         self,
         p_tokens: torch.Tensor,
