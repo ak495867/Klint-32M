@@ -1,7 +1,10 @@
-"""Multi-asset cross-market dataset for fine-tuning Klint-32M."""
+"""Multi-asset cross-market dataset for fine-tuning Klint-32M across 100 liquid institutional assets."""
+
+from __future__ import annotations
 
 import os
-from typing import List, Dict, Optional, Tuple, Literal
+import concurrent.futures
+from typing import List, Dict, Optional, Tuple, Literal, Any
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -11,23 +14,52 @@ from klint.data.factors import FactorDecomposer
 from klint.tokenizer.factor_tokenizer import FactorTokenizer
 
 
-DEFAULT_FINETUNE_TICKERS = [
-    # US Equities (Indices & Mega-caps)
+# Curated universe of 100 premier liquid institutional assets across 6 major asset classes
+INSTITUTIONAL_100_TICKERS: List[str] = [
+    # US Equities: Mega-cap Tech & High-Growth (16)
+    "AAPL", "MSFT", "NVDA", "GOOGL", "AMZN", "META", "TSLA", "AVGO",
+    "AMD", "QCOM", "INTC", "CRM", "ORCL", "ADBE", "PLTR", "CSCO",
+    # US Equities: Financials (9)
+    "JPM", "V", "MA", "BAC", "WFC", "MS", "GS", "BLK", "COIN",
+    # US Equities: Healthcare (6)
+    "LLY", "UNH", "JNJ", "ABBV", "MRK", "PFE",
+    # US Equities: Consumer & Retail (5)
+    "HD", "COST", "WMT", "PG", "KO",
+    # US Equities: Industrials & Energy (4)
+    "CAT", "GE", "XOM", "CVX",
+    # Global & Sector ETFs (20)
+    "SPY", "QQQ", "IWM", "DIA", "VOO", "VTI",
+    "XLK", "XLF", "XLV", "XLE", "XLI", "XLY", "XLP", "XLU", "XLB",
+    "SMH", "SOXX", "ARKK", "EEM", "INDA",
+    # Crypto Macro (15)
+    "BTC-USD", "ETH-USD", "SOL-USD", "BNB-USD", "XRP-USD",
+    "ADA-USD", "DOGE-USD", "AVAX-USD", "LINK-USD", "DOT-USD",
+    "NEAR-USD", "ATOM-USD", "LTC-USD", "BCH-USD", "XLM-USD",
+    # Commodities (10)
+    "GLD", "SLV", "USO", "UNG", "DBC", "CPER", "PPLT", "WEAT", "CORN", "SOYB",
+    # Rates & Fixed Income (10)
+    "TLT", "IEF", "SHY", "BND", "AGG", "LQD", "HYG", "JNK", "TIP", "BIL",
+    # Foreign Exchange / Global Macro (5)
+    "EURUSD=X", "GBPUSD=X", "USDJPY=X", "AUDUSD=X", "USDCAD=X",
+]
+
+CORE_12_TICKERS: List[str] = [
     "SPY", "QQQ", "AAPL", "NVDA", "MSFT", "TSLA",
-    # Crypto Macro
     "BTC-USD", "ETH-USD", "SOL-USD",
-    # Commodities & Fixed Income
     "GLD", "USO", "TLT",
 ]
+
+DEFAULT_FINETUNE_TICKERS: List[str] = INSTITUTIONAL_100_TICKERS
 
 
 class MultiAssetFineTuneDataset(Dataset):
     """
     Unified multi-asset token dataset for causal foundation model fine-tuning.
     
-    Ingests diverse cross-market assets (Equities, Crypto, Commodities, Rates),
-    applies invariant sanitization, computes continuous factors, encodes into
-    discrete RVQ tokens, and slices into overlapping autoregressive sequence windows.
+    Ingests diverse cross-market assets across Equities, ETFs, Crypto, Commodities,
+    Rates, and Forex. Sanitizes candle invariants, computes stationary factors,
+    encodes via Residual Vector Quantization (RVQ), and slices into overlapping
+    autoregressive token sequences.
     """
     def __init__(
         self,
@@ -41,6 +73,7 @@ class MultiAssetFineTuneDataset(Dataset):
         period: str = "2y",
         interval: str = "1h",
         cache_dir: str = "data/yfinance_cache",
+        max_workers: int = 8,
         device: str = "cpu",
     ):
         super().__init__()
@@ -52,6 +85,7 @@ class MultiAssetFineTuneDataset(Dataset):
         self.stride_bars = stride_bars
         self.seq_len = context_bars * 3  # 3 tokens per bar (P, R, A)
         self.stride_tokens = stride_bars * 3
+        self.max_workers = max_workers
         self.device = device
 
         self.decomposer = FactorDecomposer()
@@ -80,14 +114,35 @@ class MultiAssetFineTuneDataset(Dataset):
                 except Exception as e:
                     print(f"Warning: Failed loading local file {file_path}: {e}")
 
-        # 2. Ingest tickers via data fetcher
-        for ticker in self.tickers:
-            asset_info = self.fetcher.fetch_asset(ticker, period=period, interval=interval, min_bars=self.context_bars + 10)
-            if asset_info is not None:
-                ohlcv = asset_info["ohlcv"]
-                tokens = self._tokenize_ohlcv(ohlcv)
-                if tokens is not None and len(tokens) >= self.seq_len:
-                    all_asset_tokens[ticker] = tokens
+        # 2. Ingest tickers in parallel using ThreadPoolExecutor for fast network I/O
+        if len(self.tickers) > 0:
+            total_target = len(self.tickers)
+            print(f"Ingesting {total_target} assets in parallel (period={period}, interval={interval})...")
+
+            def _fetch_and_tokenize(t: str) -> Optional[Tuple[str, torch.Tensor]]:
+                try:
+                    asset_info = self.fetcher.fetch_asset(
+                        t, period=period, interval=interval, min_bars=self.context_bars + 10
+                    )
+                    if asset_info is not None:
+                        tokens = self._tokenize_ohlcv(asset_info["ohlcv"])
+                        if tokens is not None and len(tokens) >= self.seq_len:
+                            return t, tokens
+                except Exception:
+                    pass
+                return None
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                futures = {executor.submit(_fetch_and_tokenize, t): t for t in self.tickers}
+                completed = 0
+                for future in concurrent.futures.as_completed(futures):
+                    completed += 1
+                    res = future.result()
+                    if res is not None:
+                        t, tok = res
+                        all_asset_tokens[t] = tok
+                    if completed % 25 == 0 or completed == total_target:
+                        print(f"  --> Progress: {completed}/{total_target} processed ({len(all_asset_tokens)} active datasets)")
 
         # 3. Fallback: If no online data is available, generate synthetic multi-asset trajectories
         if len(all_asset_tokens) == 0:
@@ -197,11 +252,13 @@ def build_finetune_dataloaders(
     period: str = "2y",
     interval: str = "1h",
     val_ratio: float = 0.15,
+    max_workers: int = 8,
     num_workers: int = 0,
 ) -> Tuple[DataLoader, DataLoader]:
     """Factory creating train and validation DataLoaders for fine-tuning."""
+    target_tickers = DEFAULT_FINETUNE_TICKERS if tickers is None else tickers
     train_ds = MultiAssetFineTuneDataset(
-        tickers=tickers,
+        tickers=target_tickers,
         local_files=local_files,
         tokenizer=tokenizer,
         split="train",
@@ -210,9 +267,10 @@ def build_finetune_dataloaders(
         stride_bars=stride_bars,
         period=period,
         interval=interval,
+        max_workers=max_workers,
     )
     val_ds = MultiAssetFineTuneDataset(
-        tickers=tickers,
+        tickers=target_tickers,
         local_files=local_files,
         tokenizer=tokenizer,
         split="val",
@@ -221,6 +279,7 @@ def build_finetune_dataloaders(
         stride_bars=stride_bars,
         period=period,
         interval=interval,
+        max_workers=max_workers,
     )
 
     train_loader = DataLoader(train_ds, batch_size=batch_size, shuffle=True, num_workers=num_workers)
