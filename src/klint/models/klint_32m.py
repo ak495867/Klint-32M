@@ -23,6 +23,7 @@ class KlintConfig:
     max_seq_len: int = 4096
     dropout: float = 0.1
     rope_base: float = 10000.0
+    gradient_checkpointing: bool = False
 
 
 class Klint32M(nn.Module):
@@ -57,6 +58,7 @@ class Klint32M(nn.Module):
             n_heads=self.config.n_heads,
             d_ff=self.config.d_ff,
             dropout=self.config.dropout,
+            gradient_checkpointing=self.config.gradient_checkpointing,
         )
 
         # Factor-specific prediction heads

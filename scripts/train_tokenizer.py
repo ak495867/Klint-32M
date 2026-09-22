@@ -1,6 +1,14 @@
 """Stage 1: Pre-training the Factor Tokenizer (RVQ) codebooks on market bars."""
 
 import os
+import sys
+
+# Ensure src directory is in sys.path regardless of working directory
+sys.path.insert(0, os.path.abspath("src"))
+sys.path.insert(0, os.path.abspath("../src"))
+if os.path.exists("/content/Klint-32M/src"):
+    sys.path.insert(0, "/content/Klint-32M/src")
+
 import argparse
 import numpy as np
 import torch

@@ -1,6 +1,17 @@
 """Stage 3: Training the Klint-32M Foundation Model with mixed precision and gradient accumulation."""
 
 import os
+import sys
+
+# Ensure src directory is in sys.path regardless of working directory
+sys.path.insert(0, os.path.abspath("src"))
+sys.path.insert(0, os.path.abspath("../src"))
+if os.path.exists("/content/Klint-32M/src"):
+    sys.path.insert(0, "/content/Klint-32M/src")
+
+# Prevent CUDA memory fragmentation on GPUs
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+
 import math
 import time
 import argparse
@@ -52,13 +63,14 @@ def train_klint_32m(
     tokens_path: str = "data/sol_tokens.pt",
     save_dir: str = "checkpoints",
     max_steps: int = 10000,
-    batch_size: int = 4,
-    grad_accum_steps: int = 4,
+    batch_size: int = 2,
+    grad_accum_steps: int = 16,
     learning_rate: float = 3e-4,
     warmup_steps: int = 500,
     eval_interval: int = 250,
     save_interval: int = 500,
     context_bars: int = 1024,
+    gradient_checkpointing: bool = True,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
 ):
     print("=" * 60)
@@ -66,6 +78,8 @@ def train_klint_32m(
     print("=" * 60)
 
     os.makedirs(save_dir, exist_ok=True)
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     # 1. Load cached tokens
     if not os.path.exists(tokens_path):
@@ -93,9 +107,10 @@ def train_klint_32m(
     print(f"Train windows: {len(train_dataset):,} | Val windows: {len(val_dataset):,}")
     print(f"Sequence length: {context_bars} bars = {context_bars * 3} tokens")
     print(f"Effective batch size: {batch_size * grad_accum_steps} (Micro-batch={batch_size}, Accum={grad_accum_steps})")
+    print(f"Gradient Checkpointing: {gradient_checkpointing} (VRAM conservation enabled)")
 
     # 2. Model setup
-    config = KlintConfig(max_seq_len=context_bars * 3)
+    config = KlintConfig(max_seq_len=context_bars * 3, gradient_checkpointing=gradient_checkpointing)
     model = Klint32M(config).to(device)
     print(f"Trainable Parameters: {model.count_parameters():,}")
 
@@ -202,13 +217,14 @@ if __name__ == "__main__":
     parser.add_argument("--tokens_path", type=str, default="data/sol_tokens.pt")
     parser.add_argument("--save_dir", type=str, default="checkpoints")
     parser.add_argument("--max_steps", type=int, default=10000)
-    parser.add_argument("--batch_size", type=int, default=4)
-    parser.add_argument("--grad_accum_steps", type=int, default=4)
+    parser.add_argument("--batch_size", type=int, default=2)
+    parser.add_argument("--grad_accum_steps", type=int, default=16)
     parser.add_argument("--learning_rate", type=float, default=3e-4)
     parser.add_argument("--warmup_steps", type=int, default=500)
     parser.add_argument("--eval_interval", type=int, default=250)
     parser.add_argument("--save_interval", type=int, default=1000)
     parser.add_argument("--context_bars", type=int, default=1024)
+    parser.add_argument("--no_gradient_checkpointing", action="store_true")
     args = parser.parse_args()
 
     train_klint_32m(
@@ -222,4 +238,5 @@ if __name__ == "__main__":
         eval_interval=args.eval_interval,
         save_interval=args.save_interval,
         context_bars=args.context_bars,
+        gradient_checkpointing=not args.no_gradient_checkpointing,
     )

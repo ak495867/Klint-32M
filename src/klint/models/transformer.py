@@ -125,7 +125,7 @@ class CausalTransformerBlock(nn.Module):
 
 class CausalTransformerBackbone(nn.Module):
     """
-    10-layer decoder-only causal Transformer backbone.
+    10-layer decoder-only causal Transformer backbone with optional gradient checkpointing.
     """
     def __init__(
         self,
@@ -134,8 +134,10 @@ class CausalTransformerBackbone(nn.Module):
         n_heads: int = 10,
         d_ff: int = 1920,
         dropout: float = 0.1,
+        gradient_checkpointing: bool = False,
     ):
         super().__init__()
+        self.gradient_checkpointing = gradient_checkpointing
         self.layers = nn.ModuleList([
             CausalTransformerBlock(
                 d_model=d_model, n_heads=n_heads, d_ff=d_ff, dropout=dropout
@@ -152,5 +154,10 @@ class CausalTransformerBackbone(nn.Module):
         mask: Optional[torch.Tensor] = None,
     ) -> torch.Tensor:
         for layer in self.layers:
-            x = layer(x, cos, sin, mask)
+            if self.gradient_checkpointing and self.training:
+                x = torch.utils.checkpoint.checkpoint(
+                    layer, x, cos, sin, mask, use_reentrant=False
+                )
+            else:
+                x = layer(x, cos, sin, mask)
         return self.final_norm(x)
