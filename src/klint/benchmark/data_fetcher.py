@@ -131,3 +131,21 @@ class MultiAssetDataFetcher:
                 print(f"  --> Processed {idx}/{total} assets ({len(results)} valid datasets fetched)")
 
         return results
+
+    def fetch_asset_data(
+        self,
+        ticker: str,
+        name: str = "",
+        asset_class: str = "Equities",
+        period: str = "1y",
+        interval: str = "1d",
+    ) -> Optional[Dict[str, Any]]:
+        """Convenience method returning asset dict with name and asset_class populated."""
+        res = self.fetch_asset(ticker, period=period, interval=interval)
+        if res is not None:
+            res["name"] = name or ticker
+            res["asset_class"] = asset_class
+        return res
+
+
+DataFetcher = MultiAssetDataFetcher
