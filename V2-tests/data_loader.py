@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import yfinance as yf
 
-from klint.data.validation import validate_ohlcv
+from klint.data.validator import validate_ohlcv
 from klint.data.factors import FactorDecomposer, FactorStreams
 
 
