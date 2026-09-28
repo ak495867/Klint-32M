@@ -1,0 +1,38 @@
+/content/Klint-32M# python inference.py --checkpoint checkpoints/klint_32m_v2_release.pt --ticker BTC-USD --horizon 30 --save_plot forecast_v2_btc.png
+======================================================================
+ KLINT-32M: GENERATIVE FINANCIAL FORECASTING INFERENCE
+======================================================================
+Loading weights from: checkpoints/klint_32m_v2_release.pt
+  --> Detected complete Klint release bundle (Model + Tokenizer + Config).
+Klint-32M Foundation Model ready on CUDA (28,642,560 parameters).
+Fetching live market context for BTC-USD (period=3mo, interval=1d) via yfinance...
+Conditioning on 64 bars of BTC-USD (Latest Close: $82,976.38)
+Sampling 30 future bars (temperature=0.8, top_k=40)...
+
+======================================================================
+ QUANTITATIVE PREDICTION & DIRECTIONAL ALPHA SCORECARD
+======================================================================
+  Asset:                   BTC-USD
+  Current Price:           $82,976.38
+  Terminal Forecast:       $83,378.97 (+0.49%)
+  Market Signal:           NEUTRAL
+  Expected Next-Bar Alpha: +0.048%
+  Directional Probability: P(Up) = 56.8% | P(Down) = 43.2%
+  Candle Invariants:       100.00% PASSED (Guaranteed Geometry)
+======================================================================
+
+Forecasted Trajectory (First 10 Bars):
+                 Open          High           Low         Close       Volume
+Bar +1   82941.062500  85229.015625  80861.382812  83073.007812  1808.065186
+Bar +2   83084.750000  85528.960938  80824.546875  83044.695312  1318.914062
+Bar +3   83056.437500  85499.820312  80797.000000  83016.398438   712.539551
+Bar +4   83028.132812  86109.195312  80780.132812  82988.109375   745.540710
+Bar +5   82999.843750  85797.820312  80591.804688  82959.828125   449.010590
+Bar +6   82971.554688  85721.445312  80695.640625  82931.554688   814.857361
+Bar +7   82925.125000  85192.164062  80190.593750  82963.789062  1318.914062
+Bar +8   82957.359375  85387.023438  80573.960938  82996.039062  1193.692505
+Bar +9   83007.773438  85350.890625  80470.781250  82967.757812  1031.428223
+Bar +10  82932.437500  85220.148438  80852.968750  83064.367188  1080.581299
+Publication-grade forecast plot saved to: forecast_v2_btc.png
+
+Inference pipeline executed successfully.

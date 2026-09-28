@@ -1,0 +1,39 @@
+/content/Klint-32M# python inference.py --checkpoint checkpoints/klint_32m_v2_release.pt --ticker SOL-USD --horizon 30 --save_plot forecast_v2_sol.png
+======================================================================
+ KLINT-32M: GENERATIVE FINANCIAL FORECASTING INFERENCE
+======================================================================
+Loading weights from: checkpoints/klint_32m_v2_release.pt
+  --> Detected complete Klint release bundle (Model + Tokenizer + Config).
+Klint-32M Foundation Model ready on CUDA (28,642,560 parameters).
+Fetching live market context for SOL-USD (period=3mo, interval=1d) via yfinance...
+Conditioning on 64 bars of SOL-USD (Latest Close: $118.21)
+Sampling 30 future bars (temperature=0.8, top_k=40)...
+
+======================================================================
+ QUANTITATIVE PREDICTION & DIRECTIONAL ALPHA SCORECARD
+======================================================================
+  Asset:                   SOL-USD
+  Current Price:           $118.21
+  Terminal Forecast:       $120.02 (+1.53%)
+  Market Signal:           NEUTRAL
+  Expected Next-Bar Alpha: +0.049%
+  Directional Probability: P(Up) = 54.4% | P(Down) = 45.6%
+  Candle Invariants:       100.00% PASSED (Guaranteed Geometry)
+======================================================================
+
+Forecasted Trajectory (First 10 Bars):
+               Open        High         Low       Close       Volume
+Bar +1   118.159676  121.316383  115.053772  118.347649  1193.692505
+Bar +2   118.297272  121.693184  115.260963  118.485466  1965.409668
+Bar +3   118.435028  121.834900  115.395180  118.623444  2149.794189
+Bar +4   118.640213  122.793648  115.473381  118.583015   884.278320
+Bar +5   118.532532  121.911804  115.334442  118.721100   745.540710
+Bar +6   118.737885  121.754189  115.162575  118.680641   745.540710
+Bar +7   118.630119  121.792938  115.380859  118.818840   814.857361
+Bar +8   118.984932  123.997658  115.934494  119.119102  1469.810791
+Bar +9   119.109863  123.860779  115.825294  119.165398  1031.428223
+Bar +10  119.182243  122.209839  115.593552  119.124786  1080.581299
+Publication-grade forecast plot saved to: forecast_v2_sol.png
+
+Inference pipeline executed successfully.
+/content/Klint-32M# 

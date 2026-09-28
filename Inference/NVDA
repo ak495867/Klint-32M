@@ -1,0 +1,38 @@
+/content/Klint-32M# python inference.py --checkpoint checkpoints/klint_32m_v2_release.pt --ticker NVDA --horizon 30 --save_plot forecast_v2_nvda.png
+======================================================================
+ KLINT-32M: GENERATIVE FINANCIAL FORECASTING INFERENCE
+======================================================================
+Loading weights from: checkpoints/klint_32m_v2_release.pt
+  --> Detected complete Klint release bundle (Model + Tokenizer + Config).
+Klint-32M Foundation Model ready on CUDA (28,642,560 parameters).
+Fetching live market context for NVDA (period=3mo, interval=1d) via yfinance...
+Conditioning on 64 bars of NVDA (Latest Close: $225.07)
+Sampling 30 future bars (temperature=0.8, top_k=40)...
+
+======================================================================
+ QUANTITATIVE PREDICTION & DIRECTIONAL ALPHA SCORECARD
+======================================================================
+  Asset:                   NVDA
+  Current Price:           $225.07
+  Terminal Forecast:       $227.14 (+0.92%)
+  Market Signal:           NEUTRAL
+  Expected Next-Bar Alpha: +0.044%
+  Directional Probability: P(Up) = 55.5% | P(Down) = 44.5%
+  Candle Invariants:       100.00% PASSED (Guaranteed Geometry)
+======================================================================
+
+Forecasted Trajectory (First 10 Bars):
+               Open        High         Low       Close       Volume
+Bar +1   224.974197  231.915787  219.247437  225.332092   884.278320
+Bar +2   225.363953  231.978775  218.169571  225.255310   681.148071
+Bar +3   225.287155  232.830841  219.401123  225.178543  1031.428223
+Bar +4   225.210373  232.001053  217.645950  225.101807  1031.428223
+Bar +5   225.133636  231.756683  219.009186  225.025101   623.605408
+Bar +6   225.056915  230.981186  218.560181  224.948425   475.431610
+Bar +7   224.930984  231.196976  218.454498  225.035858   623.605408
+Bar +8   224.940063  231.145096  219.299866  225.297913  1031.428223
+Bar +9   225.329773  231.667953  219.509338  225.221146   850.276978
+Bar +10  225.125275  231.543427  219.051239  225.483414  1388.442993
+Publication-grade forecast plot saved to: forecast_v2_nvda.png
+
+Inference pipeline executed successfully.
