@@ -180,12 +180,14 @@ class GPUEvaluator:
             p_down_list = []
 
             for i in range(0, num_eval_bars, self.batch_size):
-                batch_toks = all_windows[i : i + self.batch_size]  # (B, context_tokens)
-                logits = self.model(batch_toks)                    # (B, context_tokens, vocab_size)
-
+                out = self.model(batch_toks)
                 # The last token in the window is Activity (A_{b-1})
                 # The model's prediction at this position is for Price (P_b)
-                last_logits = logits[:, -1, : self.config.price_vocab_size]  # (B, 512)
+                if isinstance(out, dict):
+                    last_logits = out["logits_price"][:, -1, :]  # (B, price_vocab_size)
+                else:
+                    last_logits = out[:, -1, : self.config.price_vocab_size]
+
                 probs = F.softmax(last_logits, dim=-1)                       # (B, 512)
 
                 # Vectorized expected return: sum_k P(k) * r_body(k)
