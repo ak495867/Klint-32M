@@ -39,3 +39,5 @@ ENV/
 .coverage
 htmlcov/
 **/yfinance_cache/
+**/cache/
+**/train_cache/

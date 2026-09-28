@@ -411,6 +411,44 @@ python V2-tests/run_all_tests.py --checkpoint checkpoints/klint_32m_v2_release.p
 
 ---
 
+## ⚡ TLSTM-Klint: Knowledge Distillation into an Ultra-Fast Temporal LSTM
+
+To enable ultra-low-latency deployment and edge streaming execution where the 28.6M-parameter Transformer footprint is constrained, **TLSTM-Klint** distills the foundation representations of Klint-32M v2 into a **0.59-million parameter Temporal LSTM (48.3x parameter compression, ~98% reduction)**.
+
+### 🔬 Architecture & Compression Benchmark
+
+| Dimension | Teacher Model (`Klint-32M v2`) | Student Model (`TLSTM-Klint`) | Relative Compression |
+|:---|:---:|:---:|:---:|
+| **Backbone Architecture** | 10-Layer Causal Transformer (RoPE + RMSNorm) | 2-Layer Causal LSTM + Temporal Attention | **Recurrent Streaming ($O(1)$ Memory)** |
+| **Trainable Parameters** | **28,642,560** (~28.6M) | **592,897** (~0.59M) | **48.3x Reduction (~98% Smaller)** |
+| **Hidden Dimension ($d_{\text{model}}$)** | 480 | 128 | **3.75x Compact Latent State** |
+| **Attention Mechanism** | 10 Multi-Head Attention | 2 Causal Temporal Attention Heads | **Low FLOP Footprint** |
+| **Bundle Checkpoint Size** | ~112.5 MB | **~2.4 MB** | **Ultra-Lightweight Storage** |
+| **Inference Scaling** | $O(T)$ Attention Sequence Cache | $O(1)$ Hidden State Recurrence $(h_t, c_t)$ | **Zero Latency Accumulation** |
+
+### 🧠 Knowledge Distillation Objective
+The student is trained using a composite distillation loss transferring soft logit distributions with temperature scaling ($\tau = 2.0$), hard factor token cross-entropy, PnL volatility weighting, and directional hinge penalties:
+$$\mathcal{L}_{\text{total}} = (1 - \alpha_{\text{KD}}) \mathcal{L}_{\text{CE}} + \alpha_{\text{KD}} \cdot \tau^2 \mathcal{L}_{\text{KL}} + \gamma_{\text{dir}} \mathcal{L}_{\text{dir}}$$
+
+### 🚀 Google Colab Interactive Distillation Notebook:
+Run the complete end-to-end training and 300+ fresh asset evaluation in Google Colab:
+* **Notebook Path:** [`Tlstm-Klint/TLSTM_Klint.ipynb`](Tlstm-Klint/TLSTM_Klint.ipynb)
+* Complete 11-step interactive pipeline: Teacher ingestion, student distillation training loop, fresh universe evaluation, 10 institutional tests (20 visual plots), head-to-head scorecards, and 1-click ZIP download.
+
+### CLI Execution:
+```bash
+# Train TLSTM student and execute 10-test battery across 300+ fresh assets:
+python Tlstm-Klint/run_all_tests.py \
+    --teacher_checkpoint checkpoints/klint_32m_v2_release.pt \
+    --student_checkpoint checkpoints/tlstm_klint_distilled.pt \
+    --max_assets 325 \
+    --output_dir Tlstm-Klint/TLSTM-multitest \
+    --epochs 5 \
+    --batch_size 64
+```
+
+---
+
 ## 📁 Project Structure
 
 ```text
@@ -439,6 +477,16 @@ V2-tests/                      Institutional 300+ fresh asset testing suite
   data_loader.py               High-throughput parallel data ingestion & factor extraction
   gpu_evaluator.py             GPU-accelerated batched forward prediction engine
   test_battery.py              10 quantitative test modules (20 visual plots saved to V2-multitest/)
+  run_all_tests.py             Master CLI benchmark runner & report generator
+Tlstm-Klint/                   Ultra-lightweight 0.59M Temporal LSTM student engine
+  TLSTM_Klint.ipynb            Master Google Colab interactive distillation notebook
+  tlstm_model.py               2-layer causal LSTM + temporal attention architecture
+  distillation_loss.py         Soft KD + Hard CE + PnL-weighted + Directional loss
+  trainer.py                   Knowledge distillation trainer & model bundler
+  evaluator.py                 GPU-accelerated student inference across 300+ assets
+  test_battery.py              10 quantitative test modules (20 visual plots)
+  fresh_universe.py            325+ strictly unseen assets (0% training overlap)
+  data_loader.py               High-throughput parallel data ingestion with cache
   run_all_tests.py             Master CLI benchmark runner & report generator
 inference.py                   Live market forecasting and trajectory generation engine
 src/klint/
