@@ -180,13 +180,19 @@ class GPUEvaluator:
             p_down_list = []
 
             for i in range(0, num_eval_bars, self.batch_size):
+                batch_toks = all_windows[i : i + self.batch_size]  # (B, context_tokens)
                 out = self.model(batch_toks)
+
                 # The last token in the window is Activity (A_{b-1})
                 # The model's prediction at this position is for Price (P_b)
-                if isinstance(out, dict):
-                    last_logits = out["logits_price"][:, -1, :]  # (B, price_vocab_size)
-                else:
+                if isinstance(out, torch.Tensor):
                     last_logits = out[:, -1, : self.config.price_vocab_size]
+                elif hasattr(out, "__contains__") and "logits_price" in out:
+                    last_logits = out["logits_price"][:, -1, :]
+                elif hasattr(out, "logits_price"):
+                    last_logits = out.logits_price[:, -1, :]
+                else:
+                    raise TypeError(f"Unexpected model output type: {type(out)}")
 
                 probs = F.softmax(last_logits, dim=-1)                       # (B, 512)
 
