@@ -5,7 +5,7 @@
 [![Model Version](https://img.shields.io/badge/Model-Klint--32M%20v2%20(Flagship)-orange)]()
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Parameters](https://img.shields.io/badge/Parameters-28.6M%20Trainable-purple)]()
-[![Tests](https://img.shields.io/badge/Tests-24%20Passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-26%20Passing-brightgreen)]()
 
 > **Klint** is an open research foundation architecture for generative financial time-series modeling. It represents market bars as separate **price-path**, **range-shape**, and **activity** code streams, models them with a causal Transformer, and decodes them into structurally valid OHLCV trajectories with guaranteed physical geometry.
 
@@ -183,7 +183,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 # Install package in editable mode with dev dependencies
 pip install -e ".[dev]"
 
-# Run full test suite (24 unit tests)
+# Run full test suite (26 unit tests)
 pytest tests/ -v
 ```
 
@@ -228,6 +228,37 @@ python scripts/finetune_klint32m.py --steps 500 --batch_size 16 --lr 1e-4 --lamb
 
 ---
 
+## 🧪 Klint-32M v2: 300+ Fresh Out-of-Sample Multi-Test Battery
+
+To rigorously prove out-of-sample generalization, robustness, and absolute freedom from data leakage, Klint-32M v2 includes an exhaustive **10-test institutional battery** evaluated across **300+ completely fresh assets** (0% overlap with the 101 training tickers):
+
+| Test Module | Key Evaluated Dynamics | Output Visualizations (Saved to `V2-multitest/`) |
+|:---|:---|:---|
+| **1. Multiple Monte Carlo Tests** | 2,000 block bootstrap paths, $P_5 - P_{95}$ ribbons, 99% VaR & CVaR | `monte_carlo_equity_ribbons.png`, `monte_carlo_var_cvar_dist.png` |
+| **2. Information Coefficient (IC)** | Multi-horizon Pearson and Spearman Rank IC (1, 3, 5, 10 bars) | `ic_cumulative_trajectory.png`, `ic_cross_sectional_distribution.png` |
+| **3. Cross-Sectional Sharpe Tests** | Per-asset Sharpe distribution and rolling 60-day portfolio trajectory | `sharpe_cross_asset_distribution.png`, `sharpe_rolling_trajectory.png` |
+| **4. Deflated Sharpe Ratio (DSR)** | Multiple-testing correction ($N \ge 300$) and skewness/kurtosis (López de Prado) | `dsr_selection_bias_curve.png`, `psr_moments_landscape.png` |
+| **5. Information Ratio (IR) Tests** | Active alpha generation over equal-weight market benchmark with tracking error | `ir_cumulative_alpha_curve.png`, `ir_rolling_active_risk.png` |
+| **6. Extreme Regime Shock Tests** | Resilience under 3x volatility explosion, flash crash gaps, and liquidity droughts | `shock_regime_resilience.png`, `shock_directional_error_shift.png` |
+| **7. Placebo & White Noise Tests** | Permuted returns and synthetic Gaussian noise verifying **zero data leakage** | `placebo_true_vs_permuted_dist.png`, `placebo_whitenoise_winrate_qq.png` |
+| **8. Multilayer Walk-Forward Tests** | 5 chronological purged & embargoed folds measuring Walk-Forward Efficiency (WFER) | `walkforward_fold_equity_curves.png`, `walkforward_wfer_degradation.png` |
+| **9. Noise Injection & Stability** | Graceful degradation curve against escalating factor jitter $\sigma \in [0.1, 2.0]$ | `noise_performance_decay_curve.png`, `noise_token_divergence_snr.png` |
+| **10. Friction & Fee Sweep** | 0 to 50 bps fee sensitivity identifying critical breakeven fee $F_{\text{crit}}$ | `friction_sharpe_decay_curve.png`, `friction_cumulative_pnl_sweep.png` |
+
+### 🚀 Google Colab 1-Click Execution:
+Run the complete GPU-accelerated 300+ asset evaluation in Google Colab:
+* **Notebook Path:** [`notebooks/V2_MultiTest.ipynb`](notebooks/V2_MultiTest.ipynb)
+* Automatically fetches `klint_32m_v2_release.pt` from Hugging Face if not found locally.
+* Generates all 20 publication-grade plots inline and packages `V2_multitest_results.zip` for instant 1-click download.
+
+### CLI Execution:
+```bash
+# Run complete 10-test battery across 300+ fresh assets with GPU acceleration:
+python V2-tests/run_all_tests.py --checkpoint checkpoints/klint_32m_v2_release.pt --max_assets 325 --output_dir V2-multitest --batch_size 64
+```
+
+---
+
 ## 📁 Project Structure
 
 ```text
@@ -242,6 +273,7 @@ docs/
 notebooks/
   Finetune.ipynb               Self-contained Google Colab v2 fine-tuning notebook
   Klint-32M.ipynb              Unified master Google Colab training & testing notebook
+  V2_MultiTest.ipynb           300+ fresh asset 10-test battery with 20 visual plots
 scripts/
   train_tokenizer.py           Pre-train RVQ factor codebooks
   cache_tokens.py              Pre-encode 1.59M bars into integer token IDs
@@ -250,6 +282,12 @@ scripts/
   run_comprehensive_eval.py    Comprehensive 11-experiment foundation evaluation suite
   run_multi_asset_benchmark.py 300+ asset quantitative evaluation engine
   stress_test_klint32m.py      Unified institutional stress testing suite
+V2-tests/                      Institutional 300+ fresh asset testing suite
+  fresh_universe.py            325+ strictly out-of-sample fresh assets (0% training overlap)
+  data_loader.py               High-throughput parallel data ingestion & factor extraction
+  gpu_evaluator.py             GPU-accelerated batched forward prediction engine
+  test_battery.py              10 quantitative test modules (20 visual plots saved to V2-multitest/)
+  run_all_tests.py             Master CLI benchmark runner & report generator
 inference.py                   Live market forecasting and trajectory generation engine
 src/klint/
   data/                        Validation, factor extraction, and dataset loaders
@@ -260,7 +298,7 @@ src/klint/
   eval/                        Kronos-style 11-experiment evaluation protocol
   benchmark/                   Universe registry, yfinance fetcher, and plotter
   stress_test/                 Monte Carlo, cost sensitivity, walk-forward, OOD engines
-tests/                         Comprehensive pytest test suite (24 unit tests passing)
+tests/                         Comprehensive pytest test suite (26 unit tests passing)
 ```
 
 ---
