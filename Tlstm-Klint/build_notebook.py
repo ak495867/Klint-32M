@@ -66,31 +66,53 @@ def create_notebook():
     # CELL 1: Environment & GPU Check
     # -------------------------------------------------------------
     add_md("## ⚡ Step 1: Environment Setup & Hardware Acceleration")
-    add_code("""import os
+    add_code("""# 🚀 Google Colab Zero-Setup Auto-Cloning & Path Resolution
+import os
 import sys
-import time
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
 
-# Check CUDA availability
-device = "cuda" if torch.cuda.is_available() else "cpu"
-print(f"[Hardware Check] Active PyTorch Device: {device}")
-if device == "cuda":
-    print(f"   * GPU Model: {torch.cuda.get_device_name(0)}")
-    print(f"   * VRAM Allocated: {torch.cuda.memory_allocated(0)/(1024**2):.2f} MB")
-    print(f"   * VRAM Reserved:  {torch.cuda.memory_reserved(0)/(1024**2):.2f} MB")
+IN_COLAB = "google.colab" in sys.modules or os.path.exists("/content")
+
+if IN_COLAB:
+    print("[Colab Setup] Running in Google Colab environment...")
+    if not os.path.exists("/content/Klint-32M"):
+        print("[Colab Setup] Cloning repository from GitHub (ak495867/Klint-32M)...")
+        !git clone https://github.com/ak495867/Klint-32M.git /content/Klint-32M
+    else:
+        print("[Colab Setup] Pulling latest repository updates...")
+        !cd /content/Klint-32M && git pull
+
+    # Install dependencies and package in editable mode
+    !pip install -q yfinance scipy matplotlib huggingface_hub
+    !pip install -e /content/Klint-32M
+
+    REPO_ROOT = "/content/Klint-32M"
+    os.chdir("/content/Klint-32M/Tlstm-Klint")
 else:
-    print("   ⚠️ Running on CPU. Recommend switching runtime to GPU for faster execution.")
+    # Local environment
+    curr_dir = os.path.abspath(".")
+    if os.path.exists(os.path.join(curr_dir, "..", "src")):
+        REPO_ROOT = os.path.abspath(os.path.join(curr_dir, ".."))
+    elif os.path.exists(os.path.join(curr_dir, "src")):
+        REPO_ROOT = curr_dir
+    else:
+        REPO_ROOT = curr_dir
 
-# Ensure local directories and repo root in sys.path
-REPO_ROOT = os.path.abspath("..") if os.path.exists("../src") else os.path.abspath(".")
-if REPO_ROOT not in sys.path:
-    sys.path.insert(0, REPO_ROOT)
-if os.path.join(REPO_ROOT, "src") not in sys.path:
-    sys.path.insert(0, os.path.join(REPO_ROOT, "src"))
+# Register all search paths in sys.path
+for p in [REPO_ROOT, os.path.join(REPO_ROOT, "src"), os.path.join(REPO_ROOT, "Tlstm-Klint"), os.path.join(REPO_ROOT, "V2-tests")]:
+    if os.path.exists(p) and p not in sys.path:
+        sys.path.insert(0, p)
 
-print(f"Repo Root: {REPO_ROOT}")
+import torch
+device = "cuda" if torch.cuda.is_available() else "cpu"
+print("=" * 65)
+print(f"✅ Environment Initialized Successfully!")
+print(f"   * Active Device:     {device.upper()}")
+if device == "cuda":
+    print(f"   * GPU Model:         {torch.cuda.get_device_name(0)}")
+    print(f"   * VRAM Allocated:    {torch.cuda.memory_allocated(0)/(1024**2):.2f} MB")
+print(f"   * Working Directory: {os.getcwd()}")
+print(f"   * REPO_ROOT:         {REPO_ROOT}")
+print("=" * 65)
 """)
 
     # -------------------------------------------------------------
@@ -167,6 +189,19 @@ plt.show()
     add_code("""TEACHER_CHECKPOINT = os.path.join(REPO_ROOT, "checkpoints", "klint_32m_v2_release.pt")
 STUDENT_CHECKPOINT = os.path.join(REPO_ROOT, "checkpoints", "tlstm_klint_distilled.pt")
 
+os.makedirs(os.path.dirname(TEACHER_CHECKPOINT), exist_ok=True)
+os.makedirs(os.path.dirname(STUDENT_CHECKPOINT), exist_ok=True)
+
+# Auto-download teacher checkpoint from Hugging Face if not found locally
+if not os.path.exists(TEACHER_CHECKPOINT):
+    print(f"[Checkpoint] Teacher {TEACHER_CHECKPOINT} not found locally.")
+    print("[Checkpoint] Fetching klint_32m_v2_release.pt from Hugging Face (akhverm/Klint-32M)...")
+    from huggingface_hub import hf_hub_download
+    import shutil
+    hf_path = hf_hub_download(repo_id="akhverm/Klint-32M", filename="klint_32m_v2_release.pt")
+    shutil.copy(hf_path, TEACHER_CHECKPOINT)
+    print(f"[Checkpoint] Successfully placed teacher checkpoint at: {TEACHER_CHECKPOINT}")
+
 trainer = DistillationTrainer(
     teacher_checkpoint=TEACHER_CHECKPOINT,
     student_config=student_cfg,
@@ -238,7 +273,7 @@ for cls_name, asset_list in FRESH_ASSETS_BY_CLASS.items():
 selected_fresh = all_fresh[:MAX_FRESH_ASSETS]
 print(f"[Fresh Universe] Selected {len(selected_fresh)} fresh unseen assets for evaluation.")
 
-data_loader = FreshUniverseDataLoader(cache_dir="Tlstm-Klint/cache")
+data_loader = FreshUniverseDataLoader(cache_dir=os.path.join(REPO_ROOT, "Tlstm-Klint", "cache"))
 fresh_dataset = data_loader.load_universe(selected_fresh, verbose=True)
 print(f"[Fresh Universe] Successfully loaded {len(fresh_dataset)} active assets with validated geometry.")
 """)
@@ -265,7 +300,8 @@ print(f"\\n⚡ [Inference Speedup] Evaluated {len(eval_results)} assets in {eval
     # CELL 8: Execute 10-Test Battery
     # -------------------------------------------------------------
     add_md("## 🧪 Step 8: Execute Full 10-Test Institutional Benchmark Battery")
-    add_code("""OUTPUT_DIR = "Tlstm-Klint/TLSTM-multitest"
+    add_code("""OUTPUT_DIR = os.path.join(REPO_ROOT, "Tlstm-Klint", "TLSTM-multitest")
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 battery = TLSTMTestBattery(eval_results=eval_results, output_dir=OUTPUT_DIR)
 
 benchmark_results = battery.run_all(verbose=True)

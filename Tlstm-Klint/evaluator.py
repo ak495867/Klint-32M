@@ -67,6 +67,17 @@ class TLSTMGPUEvaluator:
     def _load_bundle(self, checkpoint_path: str):
         """Loads student bundle with fallbacks."""
         if not os.path.exists(checkpoint_path):
+            alt_paths = [
+                os.path.join("..", checkpoint_path),
+                os.path.join("/content/Klint-32M", checkpoint_path),
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", checkpoint_path),
+            ]
+            for alt in alt_paths:
+                if os.path.exists(alt):
+                    checkpoint_path = alt
+                    break
+
+        if not os.path.exists(checkpoint_path):
             raise FileNotFoundError(f"Could not locate student checkpoint at: {checkpoint_path}")
 
         print(f"[TLSTMEvaluator] Loading Distilled TLSTM bundle from: {checkpoint_path} to {self.device}")

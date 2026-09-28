@@ -115,16 +115,25 @@ class DistillationTrainer:
     def _load_teacher(self, checkpoint_path: str):
         """Loads teacher bundle with fallbacks and Hugging Face download."""
         if not os.path.exists(checkpoint_path):
-            fallback_v1 = "checkpoints/klint_32m_release.pt"
-            if os.path.exists(fallback_v1):
-                checkpoint_path = fallback_v1
-            else:
-                try:
-                    from huggingface_hub import hf_hub_download
-                    print(f"[Trainer] Teacher {checkpoint_path} not found. Fetching from HF akhverm/Klint-32M...")
-                    checkpoint_path = hf_hub_download(repo_id="akhverm/Klint-32M", filename="klint_32m_v2_release.pt")
-                except Exception:
-                    raise FileNotFoundError(f"Could not load teacher from {checkpoint_path}")
+            alt_paths = [
+                os.path.join("..", checkpoint_path),
+                os.path.join("/content/Klint-32M", checkpoint_path),
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", checkpoint_path),
+                "checkpoints/klint_32m_release.pt",
+                "../checkpoints/klint_32m_release.pt",
+            ]
+            for alt in alt_paths:
+                if os.path.exists(alt):
+                    checkpoint_path = alt
+                    break
+
+        if not os.path.exists(checkpoint_path):
+            try:
+                from huggingface_hub import hf_hub_download
+                print(f"[Trainer] Teacher {checkpoint_path} not found. Fetching from HF akhverm/Klint-32M...")
+                checkpoint_path = hf_hub_download(repo_id="akhverm/Klint-32M", filename="klint_32m_v2_release.pt")
+            except Exception:
+                raise FileNotFoundError(f"Could not load teacher from {checkpoint_path}")
 
         print(f"[Trainer] Loading Klint-32M Teacher from: {checkpoint_path} to {self.device}")
         bundle = torch.load(checkpoint_path, map_location=self.device, weights_only=False)
