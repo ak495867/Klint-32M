@@ -182,8 +182,9 @@ class DistillationTrainer:
         if tickers is None:
             tickers = INSTITUTIONAL_100_TICKERS
 
+        cache_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "train_cache")
         loader = FreshUniverseDataLoader(
-            cache_dir="Tlstm-Klint/train_cache",
+            cache_dir=cache_dir,
             period=period,
             interval=interval,
             min_bars=context_bars + 10,
@@ -226,8 +227,13 @@ class DistillationTrainer:
         if verbose:
             print(f"[Trainer] Extracted {len(token_windows)} training sequence windows of length {window_tokens} tokens.")
 
+        if not token_windows:
+            raise ValueError(f"No valid sequence windows could be extracted across {len(dataset)} loaded assets.")
+
         ds = TokenSequenceDataset(token_windows, return_windows)
-        dataloader = DataLoader(ds, batch_size=32, shuffle=True, drop_last=True)
+        effective_bs = min(32, len(token_windows))
+        drop_last = len(token_windows) >= 32
+        dataloader = DataLoader(ds, batch_size=effective_bs, shuffle=True, drop_last=drop_last)
         return dataloader
 
     def train_distillation(

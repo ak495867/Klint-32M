@@ -98,15 +98,23 @@ class FreshUniverseDataLoader:
 
             raw_arr = df[required_cols].to_numpy(dtype=np.float64)
 
-            # Sanitize and validate geometry
-            clean_arr, _ = validate_ohlcv(raw_arr)
+            # Enforce physical geometry: High >= max(Open, Close), Low <= min(Open, Close)
+            raw_arr[:, 1] = np.maximum(raw_arr[:, 1], np.maximum(raw_arr[:, 0], raw_arr[:, 3]))
+            raw_arr[:, 2] = np.minimum(raw_arr[:, 2], np.minimum(raw_arr[:, 0], raw_arr[:, 3]))
+            raw_arr[:, 4] = np.maximum(raw_arr[:, 4], 0.0)
+
+            # Drop any non-finite rows
+            valid_mask = np.isfinite(raw_arr).all(axis=1)
+            clean_arr = raw_arr[valid_mask]
+
             if len(clean_arr) < self.min_bars:
                 return None
 
+            # Save to disk cache
             np.save(cache_file, clean_arr)
             return clean_arr
 
-        except Exception:
+        except Exception as e:
             return None
 
     def load_universe(
