@@ -412,7 +412,7 @@ python V2-tests/run_all_tests.py --checkpoint checkpoints/klint_32m_v2_release.p
 ---
 
 ## ⚡ TLSTM-Klint: Knowledge Distillation into an Ultra-Fast Temporal LSTM
-
+[Tlstm-Klint](checkpoints/tlsm_klint_distilled.pt)
 To enable ultra-low-latency deployment and edge streaming execution where the 28.6M-parameter Transformer footprint is constrained, **TLSTM-Klint** distills the foundation representations of Klint-32M v2 into a **0.59-million parameter Temporal LSTM (48.3x parameter compression, ~98% reduction)**.
 
 ### 🔬 Architecture & Compression Benchmark
