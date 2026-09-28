@@ -103,10 +103,20 @@ class GPUEvaluator:
         representations and extracts the body return component.
         Shape: (512,) on self.device
         """
-        codebook_weights = self.tokenizer.rvq_price.codebooks[0].to(self.device)  # (512, 64)
-        continuous_factors = self.tokenizer.dec_price(codebook_weights)          # (512, 2)
-        r_body = continuous_factors[:, 1]                                        # (512,)
-        return r_body
+        if hasattr(self.tokenizer.rvq_price, "layers"):
+            codebook_weights = self.tokenizer.rvq_price.layers[0].embedding.to(self.device)  # (512, 64)
+            continuous_factors = self.tokenizer.dec_price(codebook_weights)                  # (512, 2)
+            r_body = continuous_factors[:, 1]                                                # (512,)
+            return r_body
+        elif hasattr(self.tokenizer.rvq_price, "codebooks"):
+            codebook_weights = self.tokenizer.rvq_price.codebooks[0].to(self.device)
+            continuous_factors = self.tokenizer.dec_price(codebook_weights)
+            return continuous_factors[:, 1]
+        else:
+            p_indices = torch.arange(self.config.price_vocab_size, device=self.device)
+            dummy = torch.zeros_like(p_indices)
+            rec_p, _, _ = self.tokenizer.decode_tokens(p_indices, dummy, dummy)
+            return rec_p[:, 1]
 
     @torch.no_grad()
     def evaluate_universe(
@@ -141,13 +151,13 @@ class GPUEvaluator:
                 continue
 
             # Tokenize all bars for this asset
-            # Convert factors to tensors
-            f_price = torch.tensor(factors.price_path, dtype=torch.float32, device=self.device)
-            f_range = torch.tensor(factors.range_shape, dtype=torch.float32, device=self.device)
-            f_act = torch.tensor(factors.activity, dtype=torch.float32, device=self.device)
+            # Convert factors to tensors with batch dimension (1, num_bars, dim)
+            f_price = torch.from_numpy(factors.price_path).float().unsqueeze(0).to(self.device)
+            f_range = torch.from_numpy(factors.range_shape).float().unsqueeze(0).to(self.device)
+            f_act = torch.from_numpy(factors.activity).float().unsqueeze(0).to(self.device)
 
-            p_tok, r_tok, a_tok = self.tokenizer.quantize(f_price, f_range, f_act)
-            all_tokens = self.tokenizer.interleave(p_tok, r_tok, a_tok)  # (3 * num_bars,)
+            p_tok, r_tok, a_tok, _ = self.tokenizer.encode(f_price, f_range, f_act)
+            all_tokens = FactorTokenizer.interleave(p_tok, r_tok, a_tok).squeeze(0)  # (3 * num_bars,)
 
             # Build sliding context windows
             # Predict bar t for t in [context_bars, num_bars - 1]
